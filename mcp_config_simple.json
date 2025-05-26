@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "profile-system": {
+      "command": "python",
+      "args": [
+        "F:\\Github\\Profile\\main.py"
+      ],
+      "env": {
+        "PYTHONPATH": "F:\\Github\\Profile"
+      }
+    }
+  }
+} 
