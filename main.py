@@ -28,8 +28,6 @@ def main():
         sys.exit(0)
     except Exception as e:
         print(f"服务器启动失败: {str(e)}", file=sys.stderr)
-        print("详细错误信息:", file=sys.stderr)
-        traceback.print_exc()
         sys.exit(1)
 
 if __name__ == "__main__":
