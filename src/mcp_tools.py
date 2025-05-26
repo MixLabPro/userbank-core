@@ -2,21 +2,30 @@
 MCP工具模块
 MCP Tools Module
 
-基于FastMCP框架的个人画像数据管理工具集
+基于标准MCP Python SDK的个人画像数据管理工具集
 """
 
-from mcp.server.fastmcp import FastMCP
-from typing import List, Dict, Any, Optional
+import asyncio
 import json
-import logging
 from datetime import datetime
-from .database import get_database, ProfileDatabase
+from typing import List, Dict, Any, Optional, Sequence
 
-# 配置日志
-logger = logging.getLogger(__name__)
+from mcp.server import Server
+from mcp.server.models import InitializationOptions
+from mcp.server.stdio import stdio_server
+from mcp.types import (
+    CallToolRequest,
+    CallToolResult,
+    ListToolsRequest,
+    ListToolsResult,
+    Tool,
+    TextContent,
+)
 
-# 创建FastMCP实例
-mcp = FastMCP("个人画像数据管理系统 🧠")
+from database import get_database, ProfileDatabase
+
+# 创建MCP服务器实例
+server = Server("个人画像数据管理系统")
 
 # 获取数据库实例
 db = get_database()
@@ -33,21 +42,11 @@ TABLE_DESCRIPTIONS = {
     'methodology': '方法论'
 }
 
-@mcp.tool()
-def add_belief(content: str, related: List[str] = None) -> Dict[str, Any]:
-    """
-    添加信念记录
-    
-    Args:
-        content: 信念内容
-        related: 相关主题列表（可选）
-        
-    Returns:
-        操作结果
-    """
+# 工具函数定义
+def add_belief_impl(content: str, related: List[str] = None) -> Dict[str, Any]:
+    """添加信念记录的实现"""
     try:
         record_id = db.insert_record('belief', content, related)
-        # logger.info(f"成功添加信念记录，ID: {record_id}")
         return {
             "success": True,
             "message": f"成功添加信念记录",
@@ -56,27 +55,15 @@ def add_belief(content: str, related: List[str] = None) -> Dict[str, Any]:
             "related": related or []
         }
     except Exception as e:
-        # logger.error(f"添加信念记录失败: {e}")
         return {
             "success": False,
             "message": f"添加信念记录失败: {str(e)}"
         }
 
-@mcp.tool()
-def add_insight(content: str, related: List[str] = None) -> Dict[str, Any]:
-    """
-    添加洞察记录
-    
-    Args:
-        content: 洞察内容
-        related: 相关主题列表（可选）
-        
-    Returns:
-        操作结果
-    """
+def add_insight_impl(content: str, related: List[str] = None) -> Dict[str, Any]:
+    """添加洞察记录的实现"""
     try:
         record_id = db.insert_record('insight', content, related)
-        # logger.info(f"成功添加洞察记录，ID: {record_id}")
         return {
             "success": True,
             "message": f"成功添加洞察记录",
@@ -85,27 +72,15 @@ def add_insight(content: str, related: List[str] = None) -> Dict[str, Any]:
             "related": related or []
         }
     except Exception as e:
-        # logger.error(f"添加洞察记录失败: {e}")
         return {
             "success": False,
             "message": f"添加洞察记录失败: {str(e)}"
         }
 
-@mcp.tool()
-def add_focus(content: str, related: List[str] = None) -> Dict[str, Any]:
-    """
-    添加关注点记录
-    
-    Args:
-        content: 关注点内容
-        related: 相关主题列表（可选）
-        
-    Returns:
-        操作结果
-    """
+def add_focus_impl(content: str, related: List[str] = None) -> Dict[str, Any]:
+    """添加关注点记录的实现"""
     try:
         record_id = db.insert_record('focus', content, related)
-        # logger.info(f"成功添加关注点记录，ID: {record_id}")
         return {
             "success": True,
             "message": f"成功添加关注点记录",
@@ -114,27 +89,15 @@ def add_focus(content: str, related: List[str] = None) -> Dict[str, Any]:
             "related": related or []
         }
     except Exception as e:
-        # logger.error(f"添加关注点记录失败: {e}")
         return {
             "success": False,
             "message": f"添加关注点记录失败: {str(e)}"
         }
 
-@mcp.tool()
-def add_long_term_goal(content: str, related: List[str] = None) -> Dict[str, Any]:
-    """
-    添加长期目标记录
-    
-    Args:
-        content: 长期目标内容
-        related: 相关主题列表（可选）
-        
-    Returns:
-        操作结果
-    """
+def add_long_term_goal_impl(content: str, related: List[str] = None) -> Dict[str, Any]:
+    """添加长期目标记录的实现"""
     try:
         record_id = db.insert_record('long_term_goal', content, related)
-        # logger.info(f"成功添加长期目标记录，ID: {record_id}")
         return {
             "success": True,
             "message": f"成功添加长期目标记录",
@@ -143,27 +106,15 @@ def add_long_term_goal(content: str, related: List[str] = None) -> Dict[str, Any
             "related": related or []
         }
     except Exception as e:
-        # logger.error(f"添加长期目标记录失败: {e}")
         return {
             "success": False,
             "message": f"添加长期目标记录失败: {str(e)}"
         }
 
-@mcp.tool()
-def add_short_term_goal(content: str, related: List[str] = None) -> Dict[str, Any]:
-    """
-    添加短期目标记录
-    
-    Args:
-        content: 短期目标内容
-        related: 相关主题列表（可选）
-        
-    Returns:
-        操作结果
-    """
+def add_short_term_goal_impl(content: str, related: List[str] = None) -> Dict[str, Any]:
+    """添加短期目标记录的实现"""
     try:
         record_id = db.insert_record('short_term_goal', content, related)
-        # logger.info(f"成功添加短期目标记录，ID: {record_id}")
         return {
             "success": True,
             "message": f"成功添加短期目标记录",
@@ -172,27 +123,15 @@ def add_short_term_goal(content: str, related: List[str] = None) -> Dict[str, An
             "related": related or []
         }
     except Exception as e:
-        # logger.error(f"添加短期目标记录失败: {e}")
         return {
             "success": False,
             "message": f"添加短期目标记录失败: {str(e)}"
         }
 
-@mcp.tool()
-def add_preference(content: str, related: List[str] = None) -> Dict[str, Any]:
-    """
-    添加偏好记录
-    
-    Args:
-        content: 偏好内容
-        related: 相关主题列表（可选）
-        
-    Returns:
-        操作结果
-    """
+def add_preference_impl(content: str, related: List[str] = None) -> Dict[str, Any]:
+    """添加偏好记录的实现"""
     try:
         record_id = db.insert_record('preference', content, related)
-        # logger.info(f"成功添加偏好记录，ID: {record_id}")
         return {
             "success": True,
             "message": f"成功添加偏好记录",
@@ -201,27 +140,15 @@ def add_preference(content: str, related: List[str] = None) -> Dict[str, Any]:
             "related": related or []
         }
     except Exception as e:
-        # logger.error(f"添加偏好记录失败: {e}")
         return {
             "success": False,
             "message": f"添加偏好记录失败: {str(e)}"
         }
 
-@mcp.tool()
-def add_decision(content: str, related: List[str] = None) -> Dict[str, Any]:
-    """
-    添加决策记录
-    
-    Args:
-        content: 决策内容
-        related: 相关主题列表（可选）
-        
-    Returns:
-        操作结果
-    """
+def add_decision_impl(content: str, related: List[str] = None) -> Dict[str, Any]:
+    """添加决策记录的实现"""
     try:
         record_id = db.insert_record('decision', content, related)
-        # logger.info(f"成功添加决策记录，ID: {record_id}")
         return {
             "success": True,
             "message": f"成功添加决策记录",
@@ -230,27 +157,15 @@ def add_decision(content: str, related: List[str] = None) -> Dict[str, Any]:
             "related": related or []
         }
     except Exception as e:
-        # logger.error(f"添加决策记录失败: {e}")
         return {
             "success": False,
             "message": f"添加决策记录失败: {str(e)}"
         }
 
-@mcp.tool()
-def add_methodology(content: str, related: List[str] = None) -> Dict[str, Any]:
-    """
-    添加方法论记录
-    
-    Args:
-        content: 方法论内容
-        related: 相关主题列表（可选）
-        
-    Returns:
-        操作结果
-    """
+def add_methodology_impl(content: str, related: List[str] = None) -> Dict[str, Any]:
+    """添加方法论记录的实现"""
     try:
         record_id = db.insert_record('methodology', content, related)
-        # logger.info(f"成功添加方法论记录，ID: {record_id}")
         return {
             "success": True,
             "message": f"成功添加方法论记录",
@@ -259,26 +174,13 @@ def add_methodology(content: str, related: List[str] = None) -> Dict[str, Any]:
             "related": related or []
         }
     except Exception as e:
-        # logger.error(f"添加方法论记录失败: {e}")
         return {
             "success": False,
             "message": f"添加方法论记录失败: {str(e)}"
         }
 
-@mcp.tool()
-def update_record(table_name: str, record_id: int, content: str = None, related: List[str] = None) -> Dict[str, Any]:
-    """
-    更新记录
-    
-    Args:
-        table_name: 表名 (belief/insight/focus/long_term_goal/short_term_goal/preference/decision/methodology)
-        record_id: 记录ID
-        content: 新内容（可选）
-        related: 新相关主题列表（可选）
-        
-    Returns:
-        操作结果
-    """
+def update_record_impl(table_name: str, record_id: int, content: str = None, related: List[str] = None) -> Dict[str, Any]:
+    """更新记录的实现"""
     try:
         if table_name not in TABLE_DESCRIPTIONS:
             return {
@@ -289,7 +191,6 @@ def update_record(table_name: str, record_id: int, content: str = None, related:
         success = db.update_record(table_name, record_id, content, related)
         
         if success:
-            # logger.info(f"成功更新{TABLE_DESCRIPTIONS[table_name]}记录，ID: {record_id}")
             return {
                 "success": True,
                 "message": f"成功更新{TABLE_DESCRIPTIONS[table_name]}记录",
@@ -303,24 +204,13 @@ def update_record(table_name: str, record_id: int, content: str = None, related:
             }
             
     except Exception as e:
-        # logger.error(f"更新记录失败: {e}")
         return {
             "success": False,
             "message": f"更新记录失败: {str(e)}"
         }
 
-@mcp.tool()
-def delete_record(table_name: str, record_id: int) -> Dict[str, Any]:
-    """
-    删除记录
-    
-    Args:
-        table_name: 表名 (belief/insight/focus/long_term_goal/short_term_goal/preference/decision/methodology)
-        record_id: 记录ID
-        
-    Returns:
-        操作结果
-    """
+def delete_record_impl(table_name: str, record_id: int) -> Dict[str, Any]:
+    """删除记录的实现"""
     try:
         if table_name not in TABLE_DESCRIPTIONS:
             return {
@@ -331,7 +221,6 @@ def delete_record(table_name: str, record_id: int) -> Dict[str, Any]:
         success = db.delete_record(table_name, record_id)
         
         if success:
-            # logger.info(f"成功删除{TABLE_DESCRIPTIONS[table_name]}记录，ID: {record_id}")
             return {
                 "success": True,
                 "message": f"成功删除{TABLE_DESCRIPTIONS[table_name]}记录",
@@ -345,24 +234,13 @@ def delete_record(table_name: str, record_id: int) -> Dict[str, Any]:
             }
             
     except Exception as e:
-        # logger.error(f"删除记录失败: {e}")
         return {
             "success": False,
             "message": f"删除记录失败: {str(e)}"
         }
 
-@mcp.tool()
-def get_record(table_name: str, record_id: int) -> Dict[str, Any]:
-    """
-    获取单条记录
-    
-    Args:
-        table_name: 表名 (belief/insight/focus/long_term_goal/short_term_goal/preference/decision/methodology)
-        record_id: 记录ID
-        
-    Returns:
-        记录详情或错误信息
-    """
+def get_record_impl(table_name: str, record_id: int) -> Dict[str, Any]:
+    """获取单条记录的实现"""
     try:
         if table_name not in TABLE_DESCRIPTIONS:
             return {
@@ -373,7 +251,6 @@ def get_record(table_name: str, record_id: int) -> Dict[str, Any]:
         record = db.get_record(table_name, record_id)
         
         if record:
-            # logger.info(f"成功获取{TABLE_DESCRIPTIONS[table_name]}记录，ID: {record_id}")
             return {
                 "success": True,
                 "message": f"成功获取{TABLE_DESCRIPTIONS[table_name]}记录",
@@ -386,28 +263,14 @@ def get_record(table_name: str, record_id: int) -> Dict[str, Any]:
             }
             
     except Exception as e:
-        # logger.error(f"获取记录失败: {e}")
         return {
             "success": False,
             "message": f"获取记录失败: {str(e)}"
         }
 
-@mcp.tool()
-def search_records(table_name: str, keyword: str = None, related_topic: str = None, 
-                  limit: int = 20, offset: int = 0) -> Dict[str, Any]:
-    """
-    搜索记录
-    
-    Args:
-        table_name: 表名 (belief/insight/focus/long_term_goal/short_term_goal/preference/decision/methodology)
-        keyword: 内容关键词（可选）
-        related_topic: 相关主题（可选）
-        limit: 返回记录数限制（默认20）
-        offset: 偏移量（默认0）
-        
-    Returns:
-        搜索结果
-    """
+def search_records_impl(table_name: str, keyword: str = None, related_topic: str = None, 
+                       limit: int = 20, offset: int = 0) -> Dict[str, Any]:
+    """搜索记录的实现"""
     try:
         if table_name not in TABLE_DESCRIPTIONS:
             return {
@@ -417,7 +280,6 @@ def search_records(table_name: str, keyword: str = None, related_topic: str = No
         
         records = db.search_records(table_name, keyword, related_topic, limit, offset)
         
-        # logger.info(f"在{TABLE_DESCRIPTIONS[table_name]}表中搜索到 {len(records)} 条记录")
         return {
             "success": True,
             "message": f"在{TABLE_DESCRIPTIONS[table_name]}表中搜索到 {len(records)} 条记录",
@@ -432,25 +294,13 @@ def search_records(table_name: str, keyword: str = None, related_topic: str = No
         }
         
     except Exception as e:
-        # logger.error(f"搜索记录失败: {e}")
         return {
             "success": False,
             "message": f"搜索记录失败: {str(e)}"
         }
 
-@mcp.tool()
-def get_all_records(table_name: str, limit: int = 50, offset: int = 0) -> Dict[str, Any]:
-    """
-    获取表中所有记录
-    
-    Args:
-        table_name: 表名 (belief/insight/focus/long_term_goal/short_term_goal/preference/decision/methodology)
-        limit: 返回记录数限制（默认50）
-        offset: 偏移量（默认0）
-        
-    Returns:
-        所有记录
-    """
+def get_all_records_impl(table_name: str, limit: int = 50, offset: int = 0) -> Dict[str, Any]:
+    """获取表中所有记录的实现"""
     try:
         if table_name not in TABLE_DESCRIPTIONS:
             return {
@@ -460,7 +310,6 @@ def get_all_records(table_name: str, limit: int = 50, offset: int = 0) -> Dict[s
         
         records = db.get_all_records(table_name, limit, offset)
         
-        # logger.info(f"获取{TABLE_DESCRIPTIONS[table_name]}表中 {len(records)} 条记录")
         return {
             "success": True,
             "message": f"获取{TABLE_DESCRIPTIONS[table_name]}表中 {len(records)} 条记录",
@@ -473,23 +322,13 @@ def get_all_records(table_name: str, limit: int = 50, offset: int = 0) -> Dict[s
         }
         
     except Exception as e:
-        # logger.error(f"获取记录失败: {e}")
         return {
             "success": False,
             "message": f"获取记录失败: {str(e)}"
         }
 
-@mcp.tool()
-def get_table_stats(table_name: str = None) -> Dict[str, Any]:
-    """
-    获取表统计信息
-    
-    Args:
-        table_name: 表名（可选，如果不提供则返回所有表的统计信息）
-        
-    Returns:
-        统计信息
-    """
+def get_table_stats_impl(table_name: str = None) -> Dict[str, Any]:
+    """获取表统计信息的实现"""
     try:
         if table_name:
             if table_name not in TABLE_DESCRIPTIONS:
@@ -501,7 +340,6 @@ def get_table_stats(table_name: str = None) -> Dict[str, Any]:
             stats = db.get_table_stats(table_name)
             stats['table_description'] = TABLE_DESCRIPTIONS[table_name]
             
-            # logger.info(f"获取{TABLE_DESCRIPTIONS[table_name]}表统计信息")
             return {
                 "success": True,
                 "message": f"获取{TABLE_DESCRIPTIONS[table_name]}表统计信息",
@@ -515,7 +353,6 @@ def get_table_stats(table_name: str = None) -> Dict[str, Any]:
                 stats['table_description'] = TABLE_DESCRIPTIONS[table]
                 all_stats[table] = stats
             
-            # logger.info("获取所有表的统计信息")
             return {
                 "success": True,
                 "message": "获取所有表的统计信息",
@@ -523,22 +360,14 @@ def get_table_stats(table_name: str = None) -> Dict[str, Any]:
             }
         
     except Exception as e:
-        # logger.error(f"获取统计信息失败: {e}")
         return {
             "success": False,
             "message": f"获取统计信息失败: {str(e)}"
         }
 
-@mcp.tool()
-def get_available_tables() -> Dict[str, Any]:
-    """
-    获取所有可用的表名和描述
-    
-    Returns:
-        表名和描述的映射
-    """
+def get_available_tables_impl() -> Dict[str, Any]:
+    """获取所有可用的表名和描述的实现"""
     try:
-        # logger.info("获取所有可用表信息")
         return {
             "success": True,
             "message": "获取所有可用表信息",
@@ -546,29 +375,16 @@ def get_available_tables() -> Dict[str, Any]:
             "table_count": len(TABLE_DESCRIPTIONS)
         }
     except Exception as e:
-        # logger.error(f"获取表信息失败: {e}")
         return {
             "success": False,
             "message": f"获取表信息失败: {str(e)}"
         }
 
-@mcp.tool()
-def get_all_table_contents(include_empty: bool = True, limit_per_table: int = 100) -> Dict[str, Any]:
-    """
-    获取所有表的完整内容
-    
-    Args:
-        include_empty: 是否包含空表（默认True）
-        limit_per_table: 每个表的记录数限制（默认100）
-        
-    Returns:
-        所有表的内容和统计信息
-    """
+def get_all_table_contents_impl(include_empty: bool = True, limit_per_table: int = 100) -> Dict[str, Any]:
+    """获取所有表的完整内容的实现"""
     try:
         all_contents = {}
         total_records = 0
-        
-        # logger.info(f"🔍 开始获取所有表的内容，每表限制 {limit_per_table} 条记录")
         
         for table_name, description in TABLE_DESCRIPTIONS.items():
             try:
@@ -577,7 +393,6 @@ def get_all_table_contents(include_empty: bool = True, limit_per_table: int = 10
                 
                 # 如果不包含空表且表为空，则跳过
                 if not include_empty and stats['total_records'] == 0:
-                    # logger.info(f"⏭️ 跳过空表: {table_name} ({description})")
                     continue
                 
                 # 获取表的所有记录
@@ -591,18 +406,14 @@ def get_all_table_contents(include_empty: bool = True, limit_per_table: int = 10
                 }
                 
                 total_records += len(records)
-                # logger.info(f"✅ 获取表 {table_name} ({description}): {len(records)} 条记录")
                 
             except Exception as e:
-                # logger.error(f"❌ 获取表 {table_name} 内容失败: {e}")
                 all_contents[table_name] = {
                     "description": description,
                     "error": str(e),
                     "records": [],
                     "record_count": 0
                 }
-        
-        # logger.info(f"🎯 完成获取所有表内容，总计 {total_records} 条记录")
         
         return {
             "success": True,
@@ -617,23 +428,14 @@ def get_all_table_contents(include_empty: bool = True, limit_per_table: int = 10
         }
         
     except Exception as e:
-        # logger.error(f"❌ 获取所有表内容失败: {e}")
         return {
             "success": False,
             "message": f"获取所有表内容失败: {str(e)}"
         }
 
-@mcp.tool()
-def get_table_names_with_details() -> Dict[str, Any]:
-    """
-    获取所有表名及其详细信息（包括中文描述和统计信息）
-    
-    Returns:
-        表名详细信息
-    """
+def get_table_names_with_details_impl() -> Dict[str, Any]:
+    """获取所有表名及其详细信息的实现"""
     try:
-        # logger.info("🔍 获取所有表名和详细信息")
-        
         table_details = {}
         
         for table_name, description in TABLE_DESCRIPTIONS.items():
@@ -649,10 +451,7 @@ def get_table_names_with_details() -> Dict[str, Any]:
                     "earliest_record_time": stats.get('earliest_record_time')
                 }
                 
-                # logger.info(f"📋 表 {table_name} ({description}): {stats['total_records']} 条记录")
-                
             except Exception as e:
-                # logger.error(f"❌ 获取表 {table_name} 统计信息失败: {e}")
                 table_details[table_name] = {
                     "chinese_name": description,
                     "english_name": table_name,
@@ -663,8 +462,6 @@ def get_table_names_with_details() -> Dict[str, Any]:
         total_tables = len(table_details)
         total_records = sum(details.get('total_records', 0) for details in table_details.values())
         
-        # logger.info(f"🎯 获取完成: {total_tables} 个表，总计 {total_records} 条记录")
-        
         return {
             "success": True,
             "message": f"成功获取 {total_tables} 个表的详细信息",
@@ -674,24 +471,13 @@ def get_table_names_with_details() -> Dict[str, Any]:
         }
         
     except Exception as e:
-        # logger.error(f"❌ 获取表名详细信息失败: {e}")
         return {
             "success": False,
             "message": f"获取表名详细信息失败: {str(e)}"
         }
 
-@mcp.tool()
-def export_table_data(table_name: str, format: str = "json") -> Dict[str, Any]:
-    """
-    导出指定表的所有数据
-    
-    Args:
-        table_name: 表名 (belief/insight/focus/long_term_goal/short_term_goal/preference/decision/methodology)
-        format: 导出格式 (json/csv，默认json)
-        
-    Returns:
-        导出的数据
-    """
+def export_table_data_impl(table_name: str, format: str = "json") -> Dict[str, Any]:
+    """导出指定表的所有数据的实现"""
     try:
         if table_name not in TABLE_DESCRIPTIONS:
             return {
@@ -717,8 +503,6 @@ def export_table_data(table_name: str, format: str = "json") -> Dict[str, Any]:
                 "records": records
             }
             
-            # logger.info(f"📤 成功导出表 {table_name} 的 {len(records)} 条记录 (JSON格式)")
-            
             return {
                 "success": True,
                 "message": f"成功导出{TABLE_DESCRIPTIONS[table_name]}表的 {len(records)} 条记录",
@@ -740,8 +524,6 @@ def export_table_data(table_name: str, format: str = "json") -> Dict[str, Any]:
                     csv_lines.append(csv_line)
                 csv_data = "\n".join(csv_lines)
             
-            # logger.info(f"📤 成功导出表 {table_name} 的 {len(records)} 条记录 (CSV格式)")
-            
             return {
                 "success": True,
                 "message": f"成功导出{TABLE_DESCRIPTIONS[table_name]}表的 {len(records)} 条记录",
@@ -750,11 +532,376 @@ def export_table_data(table_name: str, format: str = "json") -> Dict[str, Any]:
             }
         
     except Exception as e:
-        # logger.error(f"❌ 导出表数据失败: {e}")
         return {
             "success": False,
             "message": f"导出表数据失败: {str(e)}"
         }
 
-# 导出MCP实例
-__all__ = ['mcp']
+# 注册工具列表处理器
+@server.list_tools()
+async def handle_list_tools() -> ListToolsResult:
+    """返回可用工具列表"""
+    tools = [
+        Tool(
+            name="add_belief",
+            description="添加信念记录",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "content": {"type": "string", "description": "信念内容"},
+                    "related": {"type": "array", "items": {"type": "string"}, "description": "相关主题列表（可选）"}
+                },
+                "required": ["content"]
+            }
+        ),
+        Tool(
+            name="add_insight",
+            description="添加洞察记录",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "content": {"type": "string", "description": "洞察内容"},
+                    "related": {"type": "array", "items": {"type": "string"}, "description": "相关主题列表（可选）"}
+                },
+                "required": ["content"]
+            }
+        ),
+        Tool(
+            name="add_focus",
+            description="添加关注点记录",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "content": {"type": "string", "description": "关注点内容"},
+                    "related": {"type": "array", "items": {"type": "string"}, "description": "相关主题列表（可选）"}
+                },
+                "required": ["content"]
+            }
+        ),
+        Tool(
+            name="add_long_term_goal",
+            description="添加长期目标记录",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "content": {"type": "string", "description": "长期目标内容"},
+                    "related": {"type": "array", "items": {"type": "string"}, "description": "相关主题列表（可选）"}
+                },
+                "required": ["content"]
+            }
+        ),
+        Tool(
+            name="add_short_term_goal",
+            description="添加短期目标记录",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "content": {"type": "string", "description": "短期目标内容"},
+                    "related": {"type": "array", "items": {"type": "string"}, "description": "相关主题列表（可选）"}
+                },
+                "required": ["content"]
+            }
+        ),
+        Tool(
+            name="add_preference",
+            description="添加偏好记录",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "content": {"type": "string", "description": "偏好内容"},
+                    "related": {"type": "array", "items": {"type": "string"}, "description": "相关主题列表（可选）"}
+                },
+                "required": ["content"]
+            }
+        ),
+        Tool(
+            name="add_decision",
+            description="添加决策记录",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "content": {"type": "string", "description": "决策内容"},
+                    "related": {"type": "array", "items": {"type": "string"}, "description": "相关主题列表（可选）"}
+                },
+                "required": ["content"]
+            }
+        ),
+        Tool(
+            name="add_methodology",
+            description="添加方法论记录",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "content": {"type": "string", "description": "方法论内容"},
+                    "related": {"type": "array", "items": {"type": "string"}, "description": "相关主题列表（可选）"}
+                },
+                "required": ["content"]
+            }
+        ),
+        Tool(
+            name="update_record",
+            description="更新记录",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "table_name": {"type": "string", "description": "表名", "enum": list(TABLE_DESCRIPTIONS.keys())},
+                    "record_id": {"type": "integer", "description": "记录ID"},
+                    "content": {"type": "string", "description": "新内容（可选）"},
+                    "related": {"type": "array", "items": {"type": "string"}, "description": "新相关主题列表（可选）"}
+                },
+                "required": ["table_name", "record_id"]
+            }
+        ),
+        Tool(
+            name="delete_record",
+            description="删除记录",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "table_name": {"type": "string", "description": "表名", "enum": list(TABLE_DESCRIPTIONS.keys())},
+                    "record_id": {"type": "integer", "description": "记录ID"}
+                },
+                "required": ["table_name", "record_id"]
+            }
+        ),
+        Tool(
+            name="get_record",
+            description="获取单条记录",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "table_name": {"type": "string", "description": "表名", "enum": list(TABLE_DESCRIPTIONS.keys())},
+                    "record_id": {"type": "integer", "description": "记录ID"}
+                },
+                "required": ["table_name", "record_id"]
+            }
+        ),
+        Tool(
+            name="search_records",
+            description="搜索记录",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "table_name": {"type": "string", "description": "表名", "enum": list(TABLE_DESCRIPTIONS.keys())},
+                    "keyword": {"type": "string", "description": "内容关键词（可选）"},
+                    "related_topic": {"type": "string", "description": "相关主题（可选）"},
+                    "limit": {"type": "integer", "description": "返回记录数限制（默认20）", "default": 20},
+                    "offset": {"type": "integer", "description": "偏移量（默认0）", "default": 0}
+                },
+                "required": ["table_name"]
+            }
+        ),
+        Tool(
+            name="get_all_records",
+            description="获取表中所有记录",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "table_name": {"type": "string", "description": "表名", "enum": list(TABLE_DESCRIPTIONS.keys())},
+                    "limit": {"type": "integer", "description": "返回记录数限制（默认50）", "default": 50},
+                    "offset": {"type": "integer", "description": "偏移量（默认0）", "default": 0}
+                },
+                "required": ["table_name"]
+            }
+        ),
+        Tool(
+            name="get_table_stats",
+            description="获取表统计信息",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "table_name": {"type": "string", "description": "表名（可选，如果不提供则返回所有表的统计信息）", "enum": list(TABLE_DESCRIPTIONS.keys())}
+                },
+                "required": []
+            }
+        ),
+        Tool(
+            name="get_available_tables",
+            description="获取所有可用的表名和描述",
+            inputSchema={
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        ),
+        Tool(
+            name="get_all_table_contents",
+            description="获取所有表的完整内容",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "include_empty": {"type": "boolean", "description": "是否包含空表（默认True）", "default": True},
+                    "limit_per_table": {"type": "integer", "description": "每个表的记录数限制（默认100）", "default": 100}
+                },
+                "required": []
+            }
+        ),
+        Tool(
+            name="get_table_names_with_details",
+            description="获取所有表名及其详细信息（包括中文描述和统计信息）",
+            inputSchema={
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        ),
+        Tool(
+            name="export_table_data",
+            description="导出指定表的所有数据",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "table_name": {"type": "string", "description": "表名", "enum": list(TABLE_DESCRIPTIONS.keys())},
+                    "format": {"type": "string", "description": "导出格式", "enum": ["json", "csv"], "default": "json"}
+                },
+                "required": ["table_name"]
+            }
+        )
+    ]
+    
+    return ListToolsResult(tools=tools)
+
+# 注册工具调用处理器
+@server.call_tool()
+async def handle_call_tool(name: str, arguments: dict) -> CallToolResult:
+    """处理工具调用"""
+    try:
+        # 根据工具名称调用相应的实现函数
+        if name == "add_belief":
+            result = add_belief_impl(
+                content=arguments["content"],
+                related=arguments.get("related")
+            )
+        elif name == "add_insight":
+            result = add_insight_impl(
+                content=arguments["content"],
+                related=arguments.get("related")
+            )
+        elif name == "add_focus":
+            result = add_focus_impl(
+                content=arguments["content"],
+                related=arguments.get("related")
+            )
+        elif name == "add_long_term_goal":
+            result = add_long_term_goal_impl(
+                content=arguments["content"],
+                related=arguments.get("related")
+            )
+        elif name == "add_short_term_goal":
+            result = add_short_term_goal_impl(
+                content=arguments["content"],
+                related=arguments.get("related")
+            )
+        elif name == "add_preference":
+            result = add_preference_impl(
+                content=arguments["content"],
+                related=arguments.get("related")
+            )
+        elif name == "add_decision":
+            result = add_decision_impl(
+                content=arguments["content"],
+                related=arguments.get("related")
+            )
+        elif name == "add_methodology":
+            result = add_methodology_impl(
+                content=arguments["content"],
+                related=arguments.get("related")
+            )
+        elif name == "update_record":
+            result = update_record_impl(
+                table_name=arguments["table_name"],
+                record_id=arguments["record_id"],
+                content=arguments.get("content"),
+                related=arguments.get("related")
+            )
+        elif name == "delete_record":
+            result = delete_record_impl(
+                table_name=arguments["table_name"],
+                record_id=arguments["record_id"]
+            )
+        elif name == "get_record":
+            result = get_record_impl(
+                table_name=arguments["table_name"],
+                record_id=arguments["record_id"]
+            )
+        elif name == "search_records":
+            result = search_records_impl(
+                table_name=arguments["table_name"],
+                keyword=arguments.get("keyword"),
+                related_topic=arguments.get("related_topic"),
+                limit=arguments.get("limit", 20),
+                offset=arguments.get("offset", 0)
+            )
+        elif name == "get_all_records":
+            result = get_all_records_impl(
+                table_name=arguments["table_name"],
+                limit=arguments.get("limit", 50),
+                offset=arguments.get("offset", 0)
+            )
+        elif name == "get_table_stats":
+            result = get_table_stats_impl(
+                table_name=arguments.get("table_name")
+            )
+        elif name == "get_available_tables":
+            result = get_available_tables_impl()
+        elif name == "get_all_table_contents":
+            result = get_all_table_contents_impl(
+                include_empty=arguments.get("include_empty", True),
+                limit_per_table=arguments.get("limit_per_table", 100)
+            )
+        elif name == "get_table_names_with_details":
+            result = get_table_names_with_details_impl()
+        elif name == "export_table_data":
+            result = export_table_data_impl(
+                table_name=arguments["table_name"],
+                format=arguments.get("format", "json")
+            )
+        else:
+            result = {
+                "success": False,
+                "message": f"未知的工具: {name}"
+            }
+        
+        # 将结果转换为JSON字符串
+        result_text = json.dumps(result, ensure_ascii=False, indent=2)
+        
+        return CallToolResult(
+            content=[TextContent(type="text", text=result_text)]
+        )
+        
+    except Exception as e:
+        error_result = {
+            "success": False,
+            "message": f"工具调用失败: {str(e)}"
+        }
+        error_text = json.dumps(error_result, ensure_ascii=False, indent=2)
+        
+        return CallToolResult(
+            content=[TextContent(type="text", text=error_text)]
+        )
+
+# 主函数
+async def main():
+    """启动MCP服务器"""
+    from mcp.server.lowlevel import NotificationOptions
+    
+    async with stdio_server() as (read_stream, write_stream):
+        await server.run(
+            read_stream,
+            write_stream,
+            InitializationOptions(
+                server_name="个人画像数据管理系统",
+                server_version="1.0.0",
+                capabilities=server.get_capabilities(
+                    notification_options=NotificationOptions(),
+                    experimental_capabilities={}
+                )
+            ),
+        )
+
+# 如果直接运行此文件，启动服务器
+if __name__ == "__main__":
+    asyncio.run(main())
+
+# 导出服务器实例
+__all__ = ['server', 'main']

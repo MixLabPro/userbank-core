@@ -7,14 +7,9 @@ Database Management Module
 
 import sqlite3
 import json
-import logging
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Tuple
 from pathlib import Path
-
-# 配置日志 - 只输出到文件，避免干扰MCP通信
-logger = logging.getLogger(__name__)
-# 移除 basicConfig 以避免控制台输出干扰 MCP 通信
 
 class ProfileDatabase:
     """个人画像数据库管理类"""
@@ -45,28 +40,15 @@ class ProfileDatabase:
         try:
             # 检查数据库文件是否存在
             db_exists = Path(db_path).exists()
-            if db_exists:
-                # logger.info(f"📁 发现已存在的数据库文件: {db_path}")
-                pass
-            else:
-                # logger.info(f"🆕 创建新的数据库文件: {db_path}")
-                pass
             
             self._connect()
             
             # 只有在数据库文件不存在或表不存在时才创建表
             if not db_exists or not self._check_tables_exist():
-                # logger.info("🔧 开始创建数据表和索引...")
                 self._create_tables()
                 self._create_indexes()
-                # logger.info("✅ 数据表和索引创建完成")
-            else:
-                # logger.info("✅ 数据库表已存在，跳过创建步骤")
-                pass
             
-            # logger.info(f"🎯 数据库初始化成功: {db_path}")
         except Exception as e:
-            # logger.error(f"❌ 数据库初始化失败: {e}")
             raise
     
     def _connect(self):
@@ -75,9 +57,7 @@ class ProfileDatabase:
             self.connection = sqlite3.connect(self.db_path, check_same_thread=False)
             self.connection.row_factory = sqlite3.Row  # 启用字典式访问
             self.cursor = self.connection.cursor()
-            # logger.info("🔗 数据库连接建立成功")
         except Exception as e:
-            # logger.error(f"❌ 数据库连接失败: {e}")
             raise
     
     def _check_tables_exist(self) -> bool:
@@ -96,13 +76,10 @@ class ProfileDatabase:
                 """, (table_name,))
                 
                 if not self.cursor.fetchone():
-                    # logger.info(f"📋 表 {table_name} 不存在")
                     return False
             
-            # logger.info("📋 所有必需的表都已存在")
             return True
         except Exception as e:
-            # logger.error(f"❌ 检查表存在性失败: {e}")
             return False
     
     def _create_tables(self):
@@ -122,12 +99,9 @@ class ProfileDatabase:
             for table_name in self.tables:
                 sql = table_sql_template.format(table_name=table_name)
                 self.cursor.execute(sql)
-                #logger.info(f"表 {table_name} 创建成功")
             
             self.connection.commit()
-            #logger.info("所有数据表创建完成")
         except Exception as e:
-            #logger.error(f"创建数据表失败: {e}")
             self.connection.rollback()
             raise
     
@@ -156,13 +130,9 @@ class ProfileDatabase:
                 self.cursor.execute(content_index_sql)
                 self.cursor.execute(time_index_sql)
                 self.cursor.execute(related_index_sql)
-                
-                #logger.info(f"表 {table_name} 的索引创建成功")
             
             self.connection.commit()
-            #logger.info("所有索引创建完成")
         except Exception as e:
-            #logger.error(f"创建索引失败: {e}")
             self.connection.rollback()
             raise
     
@@ -194,11 +164,9 @@ class ProfileDatabase:
             self.connection.commit()
             
             record_id = self.cursor.lastrowid
-            # logger.info(f"成功插入记录到表 {table_name}, ID: {record_id}")
             return record_id
             
         except Exception as e:
-            # logger.error(f"插入记录失败: {e}")
             self.connection.rollback()
             raise
     
@@ -232,7 +200,6 @@ class ProfileDatabase:
                 params.append(json.dumps(related, ensure_ascii=False))
             
             if not update_fields:
-                # logger.warning("没有提供要更新的字段")
                 return False
             
             update_fields.append("updated_time = ?")
@@ -249,14 +216,11 @@ class ProfileDatabase:
             self.connection.commit()
             
             if self.cursor.rowcount > 0:
-                # logger.info(f"成功更新表 {table_name} 中ID为 {record_id} 的记录")
                 return True
             else:
-                # logger.warning(f"表 {table_name} 中未找到ID为 {record_id} 的记录")
                 return False
                 
         except Exception as e:
-            # logger.error(f"更新记录失败: {e}")
             self.connection.rollback()
             raise
     
@@ -280,14 +244,11 @@ class ProfileDatabase:
             self.connection.commit()
             
             if self.cursor.rowcount > 0:
-                # logger.info(f"成功删除表 {table_name} 中ID为 {record_id} 的记录")
                 return True
             else:
-                # logger.warning(f"表 {table_name} 中未找到ID为 {record_id} 的记录")
                 return False
                 
         except Exception as e:
-            # logger.error(f"删除记录失败: {e}")
             self.connection.rollback()
             raise
     
@@ -322,7 +283,6 @@ class ProfileDatabase:
                 return None
                 
         except Exception as e:
-            # logger.error(f"获取记录失败: {e}")
             raise
     
     def search_records(self, table_name: str, keyword: str = None, related_topic: str = None, 
@@ -380,11 +340,9 @@ class ProfileDatabase:
                     record['related'] = []
                 records.append(record)
             
-            # logger.info(f"在表 {table_name} 中搜索到 {len(records)} 条记录")
             return records
             
         except Exception as e:
-            # logger.error(f"搜索记录失败: {e}")
             raise
     
     def get_all_records(self, table_name: str, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
@@ -435,7 +393,6 @@ class ProfileDatabase:
             }
             
         except Exception as e:
-            # logger.error(f"获取表统计信息失败: {e}")
             raise
     
     def close(self):
@@ -445,9 +402,7 @@ class ProfileDatabase:
                 self.cursor.close()
             if self.connection:
                 self.connection.close()
-            # logger.info("数据库连接已关闭")
         except Exception as e:
-            # logger.error(f"关闭数据库连接失败: {e}")
             pass
     
     def __enter__(self):
