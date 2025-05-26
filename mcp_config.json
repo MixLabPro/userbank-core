@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "profile-system": {
+      "command": "uv",
+      "args": ["run", "python", "main.py"],
+      "cwd": "F:\\Github\\Profile",
+      "env": {
+        "PYTHONPATH": "src"
+      }
+    }
+  }
+} 

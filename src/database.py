@@ -1,18 +1,25 @@
+"""
+数据库管理模块
+Database Management Module
+
+负责创建和管理个人画像数据结构的SQLite数据库
+"""
+
 import sqlite3
 import json
 import logging
 from datetime import datetime
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Any, Optional, Tuple
 from pathlib import Path
 
-# 配置日志记录
+# 配置日志
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-class PersonalProfileDatabase:
+class ProfileDatabase:
     """个人画像数据库管理类"""
     
-    def __init__(self, db_path: str = "personal_profile.db"):
+    def __init__(self, db_path: str = "profile_data.db"):
         """
         初始化数据库连接
         
@@ -20,309 +27,199 @@ class PersonalProfileDatabase:
             db_path: 数据库文件路径
         """
         self.db_path = db_path
-        self.init_database()
-        logger.info(f"数据库初始化完成: {db_path}")
-    
-    def get_connection(self) -> sqlite3.Connection:
-        """获取数据库连接"""
+        self.connection = None
+        self.cursor = None
+        
+        # 定义所有表名
+        self.tables = [
+            'belief',           # 信念
+            'insight',          # 洞察
+            'focus',           # 关注点
+            'long_term_goal',   # 长期目标
+            'short_term_goal',  # 短期目标
+            'preference',       # 偏好
+            'decision',         # 决策
+            'methodology'       # 方法论
+        ]
+        
         try:
-            conn = sqlite3.connect(self.db_path)
-            conn.row_factory = sqlite3.Row  # 使查询结果可以通过列名访问
-            return conn
-        except Exception as e:
-            logger.error(f"数据库连接失败: {e}")
-            raise
-    
-    def init_database(self):
-        """初始化数据库表结构"""
-        try:
-            with self.get_connection() as conn:
-                cursor = conn.cursor()
-                
-                # 创建信念表 (Belief)
-                cursor.execute('''
-                    CREATE TABLE IF NOT EXISTS beliefs (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        content TEXT NOT NULL,
-                        related TEXT NOT NULL,  -- JSON格式存储相关主题数组
-                        emotion TEXT DEFAULT 'neutral',
-                        create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-                        update_time DATETIME DEFAULT CURRENT_TIMESTAMP
-                    )
-                ''')
-                
-                # 创建洞察表 (Insight)
-                cursor.execute('''
-                    CREATE TABLE IF NOT EXISTS insights (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        content TEXT NOT NULL,
-                        related TEXT NOT NULL,
-                        emotion TEXT DEFAULT 'neutral',
-                        create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-                        update_time DATETIME DEFAULT CURRENT_TIMESTAMP
-                    )
-                ''')
-                
-                # 创建关注点表 (Focus)
-                cursor.execute('''
-                    CREATE TABLE IF NOT EXISTS focuses (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        content TEXT NOT NULL,
-                        related TEXT NOT NULL,
-                        emotion TEXT DEFAULT 'neutral',
-                        create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-                        update_time DATETIME DEFAULT CURRENT_TIMESTAMP
-                    )
-                ''')
-                
-                # 创建长期目标表 (Long-term Goal)
-                cursor.execute('''
-                    CREATE TABLE IF NOT EXISTS long_term_goals (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        content TEXT NOT NULL,
-                        related TEXT NOT NULL,
-                        emotion TEXT DEFAULT 'neutral',
-                        status TEXT DEFAULT 'active',  -- active, completed, paused
-                        create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-                        update_time DATETIME DEFAULT CURRENT_TIMESTAMP
-                    )
-                ''')
-                
-                # 创建短期目标表 (Short-term Goal)
-                cursor.execute('''
-                    CREATE TABLE IF NOT EXISTS short_term_goals (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        content TEXT NOT NULL,
-                        related TEXT NOT NULL,
-                        emotion TEXT DEFAULT 'neutral',
-                        status TEXT DEFAULT 'active',
-                        deadline DATE,
-                        create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-                        update_time DATETIME DEFAULT CURRENT_TIMESTAMP
-                    )
-                ''')
-                
-                # 创建偏好表 (Preference)
-                cursor.execute('''
-                    CREATE TABLE IF NOT EXISTS preferences (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        content TEXT NOT NULL,
-                        related TEXT NOT NULL,
-                        emotion TEXT DEFAULT 'neutral',
-                        strength INTEGER DEFAULT 5,  -- 偏好强度 1-10
-                        create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-                        update_time DATETIME DEFAULT CURRENT_TIMESTAMP
-                    )
-                ''')
-                
-                # 创建决策表 (Decision)
-                cursor.execute('''
-                    CREATE TABLE IF NOT EXISTS decisions (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        content TEXT NOT NULL,
-                        related TEXT NOT NULL,
-                        emotion TEXT DEFAULT 'neutral',
-                        context TEXT,  -- 决策背景
-                        outcome TEXT,  -- 决策结果
-                        create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-                        update_time DATETIME DEFAULT CURRENT_TIMESTAMP
-                    )
-                ''')
-                
-                # 创建方法论表 (Methodology)
-                cursor.execute('''
-                    CREATE TABLE IF NOT EXISTS methodologies (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        content TEXT NOT NULL,
-                        related TEXT NOT NULL,
-                        emotion TEXT DEFAULT 'neutral',
-                        category TEXT,  -- 方法论分类
-                        effectiveness INTEGER DEFAULT 5,  -- 有效性评分 1-10
-                        create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-                        update_time DATETIME DEFAULT CURRENT_TIMESTAMP
-                    )
-                ''')
-                
-                # 创建索引以提高查询性能
-                cursor.execute('CREATE INDEX IF NOT EXISTS idx_beliefs_create_time ON beliefs(create_time)')
-                cursor.execute('CREATE INDEX IF NOT EXISTS idx_insights_create_time ON insights(create_time)')
-                cursor.execute('CREATE INDEX IF NOT EXISTS idx_focuses_create_time ON focuses(create_time)')
-                cursor.execute('CREATE INDEX IF NOT EXISTS idx_long_term_goals_create_time ON long_term_goals(create_time)')
-                cursor.execute('CREATE INDEX IF NOT EXISTS idx_short_term_goals_create_time ON short_term_goals(create_time)')
-                cursor.execute('CREATE INDEX IF NOT EXISTS idx_preferences_create_time ON preferences(create_time)')
-                cursor.execute('CREATE INDEX IF NOT EXISTS idx_decisions_create_time ON decisions(create_time)')
-                cursor.execute('CREATE INDEX IF NOT EXISTS idx_methodologies_create_time ON methodologies(create_time)')
-                
-                conn.commit()
-                logger.info("数据库表结构创建成功")
-                
+            self._connect()
+            self._create_tables()
+            self._create_indexes()
+            logger.info(f"数据库初始化成功: {db_path}")
         except Exception as e:
             logger.error(f"数据库初始化失败: {e}")
             raise
     
-    def _format_related(self, related: List[str]) -> str:
-        """将相关主题列表转换为JSON字符串"""
-        return json.dumps(related, ensure_ascii=False)
-    
-    def _parse_related(self, related_str: str) -> List[str]:
-        """将JSON字符串转换为相关主题列表"""
+    def _connect(self):
+        """建立数据库连接"""
         try:
-            return json.loads(related_str)
-        except:
-            return []
+            self.connection = sqlite3.connect(self.db_path, check_same_thread=False)
+            self.connection.row_factory = sqlite3.Row  # 启用字典式访问
+            self.cursor = self.connection.cursor()
+            logger.info("数据库连接建立成功")
+        except Exception as e:
+            logger.error(f"数据库连接失败: {e}")
+            raise
     
-    def _row_to_dict(self, row: sqlite3.Row) -> Dict[str, Any]:
-        """将数据库行转换为字典"""
-        result = dict(row)
-        if 'related' in result:
-            result['related'] = self._parse_related(result['related'])
-        return result
-    
-    # 通用的CRUD操作方法
-    def insert_record(self, table_name: str, data: Dict[str, Any]) -> int:
+    def _create_tables(self):
+        """创建所有数据表"""
+        # 通用表结构SQL模板
+        table_sql_template = """
+        CREATE TABLE IF NOT EXISTS {table_name} (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            content TEXT NOT NULL,
+            related TEXT,  -- JSON格式存储相关主题数组
+            created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
         """
-        插入记录到指定表
+        
+        try:
+            for table_name in self.tables:
+                sql = table_sql_template.format(table_name=table_name)
+                self.cursor.execute(sql)
+                logger.info(f"表 {table_name} 创建成功")
+            
+            self.connection.commit()
+            logger.info("所有数据表创建完成")
+        except Exception as e:
+            logger.error(f"创建数据表失败: {e}")
+            self.connection.rollback()
+            raise
+    
+    def _create_indexes(self):
+        """创建数据库索引以提升查询性能"""
+        try:
+            for table_name in self.tables:
+                # 为content字段创建索引（支持全文搜索）
+                content_index_sql = f"""
+                CREATE INDEX IF NOT EXISTS idx_{table_name}_content 
+                ON {table_name}(content)
+                """
+                
+                # 为created_time字段创建索引（支持时间范围查询）
+                time_index_sql = f"""
+                CREATE INDEX IF NOT EXISTS idx_{table_name}_created_time 
+                ON {table_name}(created_time)
+                """
+                
+                # 为related字段创建索引（支持主题搜索）
+                related_index_sql = f"""
+                CREATE INDEX IF NOT EXISTS idx_{table_name}_related 
+                ON {table_name}(related)
+                """
+                
+                self.cursor.execute(content_index_sql)
+                self.cursor.execute(time_index_sql)
+                self.cursor.execute(related_index_sql)
+                
+                logger.info(f"表 {table_name} 的索引创建成功")
+            
+            self.connection.commit()
+            logger.info("所有索引创建完成")
+        except Exception as e:
+            logger.error(f"创建索引失败: {e}")
+            self.connection.rollback()
+            raise
+    
+    def insert_record(self, table_name: str, content: str, related: List[str] = None) -> int:
+        """
+        插入新记录
         
         Args:
             table_name: 表名
-            data: 要插入的数据字典
+            content: 内容
+            related: 相关主题列表
             
         Returns:
-            插入记录的ID
+            新插入记录的ID
         """
+        if table_name not in self.tables:
+            raise ValueError(f"无效的表名: {table_name}")
+        
         try:
-            with self.get_connection() as conn:
-                cursor = conn.cursor()
-                
-                # 处理related字段
-                if 'related' in data and isinstance(data['related'], list):
-                    data['related'] = self._format_related(data['related'])
-                
-                # 构建插入SQL
-                columns = ', '.join(data.keys())
-                placeholders = ', '.join(['?' for _ in data])
-                sql = f"INSERT INTO {table_name} ({columns}) VALUES ({placeholders})"
-                
-                cursor.execute(sql, list(data.values()))
-                record_id = cursor.lastrowid
-                
-                logger.info(f"成功插入记录到 {table_name} 表，ID: {record_id}")
-                return record_id
-                
+            related_json = json.dumps(related or [], ensure_ascii=False)
+            
+            sql = f"""
+            INSERT INTO {table_name} (content, related, created_time, updated_time)
+            VALUES (?, ?, ?, ?)
+            """
+            
+            current_time = datetime.now().isoformat()
+            self.cursor.execute(sql, (content, related_json, current_time, current_time))
+            self.connection.commit()
+            
+            record_id = self.cursor.lastrowid
+            logger.info(f"成功插入记录到表 {table_name}, ID: {record_id}")
+            return record_id
+            
         except Exception as e:
             logger.error(f"插入记录失败: {e}")
+            self.connection.rollback()
             raise
     
-    def get_records(self, table_name: str, limit: int = 100, offset: int = 0, 
-                   order_by: str = "create_time DESC") -> List[Dict[str, Any]]:
+    def update_record(self, table_name: str, record_id: int, content: str = None, related: List[str] = None) -> bool:
         """
-        获取表中的记录
-        
-        Args:
-            table_name: 表名
-            limit: 限制返回记录数
-            offset: 偏移量
-            order_by: 排序字段
-            
-        Returns:
-            记录列表
-        """
-        try:
-            with self.get_connection() as conn:
-                cursor = conn.cursor()
-                sql = f"SELECT * FROM {table_name} ORDER BY {order_by} LIMIT ? OFFSET ?"
-                cursor.execute(sql, (limit, offset))
-                
-                rows = cursor.fetchall()
-                records = [self._row_to_dict(row) for row in rows]
-                
-                logger.info(f"从 {table_name} 表获取到 {len(records)} 条记录")
-                return records
-                
-        except Exception as e:
-            logger.error(f"获取记录失败: {e}")
-            raise
-    
-    def search_records(self, table_name: str, keyword: str, 
-                      limit: int = 50) -> List[Dict[str, Any]]:
-        """
-        在指定表中搜索包含关键词的记录
-        
-        Args:
-            table_name: 表名
-            keyword: 搜索关键词
-            limit: 限制返回记录数
-            
-        Returns:
-            匹配的记录列表
-        """
-        try:
-            with self.get_connection() as conn:
-                cursor = conn.cursor()
-                sql = f"""
-                    SELECT * FROM {table_name} 
-                    WHERE content LIKE ? OR related LIKE ?
-                    ORDER BY create_time DESC 
-                    LIMIT ?
-                """
-                search_term = f"%{keyword}%"
-                cursor.execute(sql, (search_term, search_term, limit))
-                
-                rows = cursor.fetchall()
-                records = [self._row_to_dict(row) for row in rows]
-                
-                logger.info(f"在 {table_name} 表中搜索 '{keyword}' 找到 {len(records)} 条记录")
-                return records
-                
-        except Exception as e:
-            logger.error(f"搜索记录失败: {e}")
-            raise
-    
-    def update_record(self, table_name: str, record_id: int, 
-                     data: Dict[str, Any]) -> bool:
-        """
-        更新指定记录
+        更新记录
         
         Args:
             table_name: 表名
             record_id: 记录ID
-            data: 要更新的数据
+            content: 新内容（可选）
+            related: 新相关主题列表（可选）
             
         Returns:
             是否更新成功
         """
+        if table_name not in self.tables:
+            raise ValueError(f"无效的表名: {table_name}")
+        
         try:
-            with self.get_connection() as conn:
-                cursor = conn.cursor()
-                
-                # 处理related字段
-                if 'related' in data and isinstance(data['related'], list):
-                    data['related'] = self._format_related(data['related'])
-                
-                # 添加更新时间
-                data['update_time'] = datetime.now().isoformat()
-                
-                # 构建更新SQL
-                set_clause = ', '.join([f"{key} = ?" for key in data.keys()])
-                sql = f"UPDATE {table_name} SET {set_clause} WHERE id = ?"
-                
-                cursor.execute(sql, list(data.values()) + [record_id])
-                success = cursor.rowcount > 0
-                
-                if success:
-                    logger.info(f"成功更新 {table_name} 表中ID为 {record_id} 的记录")
-                else:
-                    logger.warning(f"未找到 {table_name} 表中ID为 {record_id} 的记录")
-                
-                return success
+            # 构建更新字段
+            update_fields = []
+            params = []
+            
+            if content is not None:
+                update_fields.append("content = ?")
+                params.append(content)
+            
+            if related is not None:
+                update_fields.append("related = ?")
+                params.append(json.dumps(related, ensure_ascii=False))
+            
+            if not update_fields:
+                logger.warning("没有提供要更新的字段")
+                return False
+            
+            update_fields.append("updated_time = ?")
+            params.append(datetime.now().isoformat())
+            params.append(record_id)
+            
+            sql = f"""
+            UPDATE {table_name} 
+            SET {', '.join(update_fields)}
+            WHERE id = ?
+            """
+            
+            self.cursor.execute(sql, params)
+            self.connection.commit()
+            
+            if self.cursor.rowcount > 0:
+                logger.info(f"成功更新表 {table_name} 中ID为 {record_id} 的记录")
+                return True
+            else:
+                logger.warning(f"表 {table_name} 中未找到ID为 {record_id} 的记录")
+                return False
                 
         except Exception as e:
             logger.error(f"更新记录失败: {e}")
+            self.connection.rollback()
             raise
     
     def delete_record(self, table_name: str, record_id: int) -> bool:
         """
-        删除指定记录
+        删除记录
         
         Args:
             table_name: 表名
@@ -331,49 +228,199 @@ class PersonalProfileDatabase:
         Returns:
             是否删除成功
         """
+        if table_name not in self.tables:
+            raise ValueError(f"无效的表名: {table_name}")
+        
         try:
-            with self.get_connection() as conn:
-                cursor = conn.cursor()
-                sql = f"DELETE FROM {table_name} WHERE id = ?"
-                cursor.execute(sql, (record_id,))
-                success = cursor.rowcount > 0
-                
-                if success:
-                    logger.info(f"成功删除 {table_name} 表中ID为 {record_id} 的记录")
-                else:
-                    logger.warning(f"未找到 {table_name} 表中ID为 {record_id} 的记录")
-                
-                return success
+            sql = f"DELETE FROM {table_name} WHERE id = ?"
+            self.cursor.execute(sql, (record_id,))
+            self.connection.commit()
+            
+            if self.cursor.rowcount > 0:
+                logger.info(f"成功删除表 {table_name} 中ID为 {record_id} 的记录")
+                return True
+            else:
+                logger.warning(f"表 {table_name} 中未找到ID为 {record_id} 的记录")
+                return False
                 
         except Exception as e:
             logger.error(f"删除记录失败: {e}")
+            self.connection.rollback()
             raise
     
-    def get_statistics(self) -> Dict[str, int]:
+    def get_record(self, table_name: str, record_id: int) -> Optional[Dict[str, Any]]:
         """
-        获取数据库统计信息
+        获取单条记录
         
-        Returns:
-            各表的记录数统计
-        """
-        try:
-            tables = [
-                'beliefs', 'insights', 'focuses', 'long_term_goals',
-                'short_term_goals', 'preferences', 'decisions', 'methodologies'
-            ]
+        Args:
+            table_name: 表名
+            record_id: 记录ID
             
-            stats = {}
-            with self.get_connection() as conn:
-                cursor = conn.cursor()
-                
-                for table in tables:
-                    cursor.execute(f"SELECT COUNT(*) FROM {table}")
-                    count = cursor.fetchone()[0]
-                    stats[table] = count
-                
-                logger.info(f"数据库统计信息: {stats}")
-                return stats
+        Returns:
+            记录字典或None
+        """
+        if table_name not in self.tables:
+            raise ValueError(f"无效的表名: {table_name}")
+        
+        try:
+            sql = f"SELECT * FROM {table_name} WHERE id = ?"
+            self.cursor.execute(sql, (record_id,))
+            row = self.cursor.fetchone()
+            
+            if row:
+                record = dict(row)
+                # 解析JSON格式的related字段
+                if record['related']:
+                    record['related'] = json.loads(record['related'])
+                else:
+                    record['related'] = []
+                return record
+            else:
+                return None
                 
         except Exception as e:
-            logger.error(f"获取统计信息失败: {e}")
-            raise 
+            logger.error(f"获取记录失败: {e}")
+            raise
+    
+    def search_records(self, table_name: str, keyword: str = None, related_topic: str = None, 
+                      limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
+        """
+        搜索记录
+        
+        Args:
+            table_name: 表名
+            keyword: 内容关键词
+            related_topic: 相关主题
+            limit: 返回记录数限制
+            offset: 偏移量
+            
+        Returns:
+            记录列表
+        """
+        if table_name not in self.tables:
+            raise ValueError(f"无效的表名: {table_name}")
+        
+        try:
+            conditions = []
+            params = []
+            
+            if keyword:
+                conditions.append("content LIKE ?")
+                params.append(f"%{keyword}%")
+            
+            if related_topic:
+                conditions.append("related LIKE ?")
+                params.append(f"%{related_topic}%")
+            
+            where_clause = ""
+            if conditions:
+                where_clause = "WHERE " + " AND ".join(conditions)
+            
+            sql = f"""
+            SELECT * FROM {table_name} 
+            {where_clause}
+            ORDER BY created_time DESC 
+            LIMIT ? OFFSET ?
+            """
+            
+            params.extend([limit, offset])
+            self.cursor.execute(sql, params)
+            rows = self.cursor.fetchall()
+            
+            records = []
+            for row in rows:
+                record = dict(row)
+                # 解析JSON格式的related字段
+                if record['related']:
+                    record['related'] = json.loads(record['related'])
+                else:
+                    record['related'] = []
+                records.append(record)
+            
+            logger.info(f"在表 {table_name} 中搜索到 {len(records)} 条记录")
+            return records
+            
+        except Exception as e:
+            logger.error(f"搜索记录失败: {e}")
+            raise
+    
+    def get_all_records(self, table_name: str, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
+        """
+        获取表中所有记录
+        
+        Args:
+            table_name: 表名
+            limit: 返回记录数限制
+            offset: 偏移量
+            
+        Returns:
+            记录列表
+        """
+        return self.search_records(table_name, limit=limit, offset=offset)
+    
+    def get_table_stats(self, table_name: str) -> Dict[str, Any]:
+        """
+        获取表统计信息
+        
+        Args:
+            table_name: 表名
+            
+        Returns:
+            统计信息字典
+        """
+        if table_name not in self.tables:
+            raise ValueError(f"无效的表名: {table_name}")
+        
+        try:
+            # 获取记录总数
+            self.cursor.execute(f"SELECT COUNT(*) as total FROM {table_name}")
+            total = self.cursor.fetchone()['total']
+            
+            # 获取最新记录时间
+            self.cursor.execute(f"SELECT MAX(created_time) as latest FROM {table_name}")
+            latest = self.cursor.fetchone()['latest']
+            
+            # 获取最早记录时间
+            self.cursor.execute(f"SELECT MIN(created_time) as earliest FROM {table_name}")
+            earliest = self.cursor.fetchone()['earliest']
+            
+            return {
+                'table_name': table_name,
+                'total_records': total,
+                'latest_record': latest,
+                'earliest_record': earliest
+            }
+            
+        except Exception as e:
+            logger.error(f"获取表统计信息失败: {e}")
+            raise
+    
+    def close(self):
+        """关闭数据库连接"""
+        try:
+            if self.cursor:
+                self.cursor.close()
+            if self.connection:
+                self.connection.close()
+            logger.info("数据库连接已关闭")
+        except Exception as e:
+            logger.error(f"关闭数据库连接失败: {e}")
+    
+    def __enter__(self):
+        """上下文管理器入口"""
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """上下文管理器出口"""
+        self.close()
+
+
+# 创建全局数据库实例
+db_instance = None
+
+def get_database() -> ProfileDatabase:
+    """获取数据库实例（单例模式）"""
+    global db_instance
+    if db_instance is None:
+        db_instance = ProfileDatabase()
+    return db_instance
