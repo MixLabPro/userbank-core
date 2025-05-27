@@ -1,0 +1,15 @@
+{
+    "mcpServers": {
+      "profile-system": {
+        "command": "uv",
+        "args": [
+          "run",
+          "--with",
+          "mcp",
+          "mcp",
+          "run",
+          "F:/Github/Profile/main.py"
+        ]
+      }
+    }
+  }
