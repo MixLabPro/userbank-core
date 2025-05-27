@@ -224,6 +224,18 @@ async def list_tools() -> List[types.Tool]:
                 "properties": {},
                 "required": []
             }
+        ),
+        types.Tool(
+            name="get_all_table_contents",
+            description="获取所有表的完整内容",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "include_empty": {"type": "boolean", "description": "是否包含空表", "default": True},
+                    "limit_per_table": {"type": "integer", "description": "每个表的记录数限制", "default": 100}
+                },
+                "required": []
+            }
         )
     ]
 
@@ -507,6 +519,61 @@ async def call_tool(
             }
             return [types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
         
+        elif name == "get_all_table_contents":
+            include_empty = arguments.get("include_empty", True)
+            limit_per_table = arguments.get("limit_per_table", 100)
+            
+            try:
+                all_contents = {}
+                total_records = 0
+                
+                for table_name, description in TABLE_DESCRIPTIONS.items():
+                    try:
+                        # 获取表的统计信息
+                        stats = db.get_table_stats(table_name)
+                        
+                        # 如果不包含空表且表为空，则跳过
+                        if not include_empty and stats['total_records'] == 0:
+                            continue
+                        
+                        # 获取表的所有记录
+                        records = db.get_all_records(table_name, limit_per_table, 0)
+                        
+                        all_contents[table_name] = {
+                            "description": description,
+                            "stats": stats,
+                            "records": records,
+                            "record_count": len(records)
+                        }
+                        
+                        total_records += len(records)
+                        
+                    except Exception as e:
+                        all_contents[table_name] = {
+                            "description": description,
+                            "error": str(e),
+                            "records": [],
+                            "record_count": 0
+                        }
+                
+                result = {
+                    "success": True,
+                    "message": f"成功获取所有表内容，总计 {total_records} 条记录",
+                    "total_records": total_records,
+                    "table_count": len(all_contents),
+                    "contents": all_contents,
+                    "params": {
+                        "include_empty": include_empty,
+                        "limit_per_table": limit_per_table
+                    }
+                }
+            except Exception as e:
+                result = {
+                    "success": False,
+                    "message": f"获取所有表内容失败: {str(e)}"
+                }
+            return [types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+        
         else:
             result = {
                 "success": False,
@@ -536,16 +603,7 @@ async def handle_sse(scope, receive, send):
     """处理SSE连接"""
     print(f"SSE连接请求: {scope['method']} {scope['path']}")
     
-    # 验证Origin头以防止DNS重绑定攻击
-    headers = dict(scope.get("headers", []))
-    origin = headers.get(b"origin")
-    
-    # 只允许本地连接
-    if origin and not origin.decode().startswith(("http://localhost", "http://127.0.0.1")):
-        from starlette.responses import Response
-        response = Response("Forbidden", status_code=403)
-        await response(scope, receive, send)
-        return
+    # 允许所有来源访问（已移除Origin验证）
     
     try:
         async with sse.connect_sse(scope, receive, send) as streams:
@@ -561,16 +619,7 @@ async def handle_messages(scope, receive, send):
     """处理POST消息"""
     print(f"POST消息请求: {scope['method']} {scope['path']}")
     
-    # 验证Origin头以防止DNS重绑定攻击
-    headers = dict(scope.get("headers", []))
-    origin = headers.get(b"origin")
-    
-    # 只允许本地连接
-    if origin and not origin.decode().startswith(("http://localhost", "http://127.0.0.1")):
-        from starlette.responses import Response
-        response = Response("Forbidden", status_code=403)
-        await response(scope, receive, send)
-        return
+    # 允许所有来源访问（已移除Origin验证）
     
     try:
         await sse.handle_post_message(scope, receive, send)
@@ -628,12 +677,12 @@ starlette_app = Starlette(
     ]
 )
 
-# 添加CORS中间件（仅允许本地连接）
+# 添加CORS中间件（允许所有访问）
 starlette_app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:*", "http://127.0.0.1:*"],
-    allow_credentials=True,
-    allow_methods=["GET", "POST"],
+    allow_origins=["*"],
+    allow_credentials=False,  # 当使用 "*" 时必须设为 False
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -642,17 +691,18 @@ async def main():
     """启动SSE服务器"""
     
     print("正在启动个人画像数据管理系统 MCP SSE 服务器...")
-    print(f"服务器地址: http://127.0.0.1:8000")
-    print(f"SSE端点: http://127.0.0.1:8000/sse")
-    print(f"消息端点: http://127.0.0.1:8000/messages")
-    print(f"健康检查: http://127.0.0.1:8000/health")
-    print(f"服务器信息: http://127.0.0.1:8000/info")
+    print(f"服务器地址: http://0.0.0.0:8000 (可通过任何IP访问)")
+    print(f"本地访问: http://127.0.0.1:8000")
+    print(f"SSE端点: http://0.0.0.0:8000/sse")
+    print(f"消息端点: http://0.0.0.0:8000/messages")
+    print(f"健康检查: http://0.0.0.0:8000/health")
+    print(f"服务器信息: http://0.0.0.0:8000/info")
     print("按 Ctrl+C 停止服务器")
     
-    # 启动服务器，只绑定到localhost以增强安全性
+    # 启动服务器，绑定到所有接口以允许外部访问
     config = uvicorn.Config(
         starlette_app, 
-        host="127.0.0.1",  # 只绑定到localhost，不是0.0.0.0
+        host="0.0.0.0",  # 绑定到所有接口，允许外部访问
         port=8000,  # 使用8000端口避免冲突
         log_level="info"
     )
