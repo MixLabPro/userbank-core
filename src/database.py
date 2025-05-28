@@ -359,39 +359,54 @@ class ProfileDatabase:
         """
         return self.search_records(table_name, limit=limit, offset=offset)
     
-    def get_table_stats(self, table_name: str) -> Dict[str, Any]:
+    def get_table_stats(self, table_name: str = None) -> Dict[str, Any]:
         """
         获取表统计信息
         
         Args:
-            table_name: 表名
+            table_name: 表名（可选，不提供则获取所有表的统计信息）
             
         Returns:
             统计信息字典
         """
-        if table_name not in self.tables:
-            raise ValueError(f"无效的表名: {table_name}")
-        
         try:
-            # 获取记录总数
-            self.cursor.execute(f"SELECT COUNT(*) as total FROM {table_name}")
-            total = self.cursor.fetchone()['total']
-            
-            # 获取最新记录时间
-            self.cursor.execute(f"SELECT MAX(created_time) as latest FROM {table_name}")
-            latest = self.cursor.fetchone()['latest']
-            
-            # 获取最早记录时间
-            self.cursor.execute(f"SELECT MIN(created_time) as earliest FROM {table_name}")
-            earliest = self.cursor.fetchone()['earliest']
-            
-            return {
-                'table_name': table_name,
-                'total_records': total,
-                'latest_record': latest,
-                'earliest_record': earliest
-            }
-            
+            if table_name:
+                # 获取单个表的统计信息
+                if table_name not in self.tables:
+                    raise ValueError(f"无效的表名: {table_name}")
+                
+                # 获取记录总数
+                self.cursor.execute(f"SELECT COUNT(*) as total FROM {table_name}")
+                total = self.cursor.fetchone()['total']
+                
+                # 获取最新记录时间
+                self.cursor.execute(f"SELECT MAX(created_time) as latest FROM {table_name}")
+                latest = self.cursor.fetchone()['latest']
+                
+                # 获取最早记录时间
+                self.cursor.execute(f"SELECT MIN(created_time) as earliest FROM {table_name}")
+                earliest = self.cursor.fetchone()['earliest']
+                
+                return {
+                    'table_name': table_name,
+                    'total_records': total,
+                    'latest_record': latest,
+                    'earliest_record': earliest
+                }
+            else:
+                # 获取所有表的统计信息
+                all_stats = {}
+                for table in self.tables:
+                    # 递归调用自身获取单个表的统计信息
+                    stats = self.get_table_stats(table)
+                    all_stats[table] = stats
+                
+                return {
+                    'message': '所有表的统计信息',
+                    'table_count': len(all_stats),
+                    'all_stats': all_stats
+                }
+                
         except Exception as e:
             raise
     
