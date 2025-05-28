@@ -395,6 +395,157 @@ class ProfileDatabase:
         except Exception as e:
             raise
     
+    def execute_custom_sql(self, sql: str, params: List[Any] = None, fetch_results: bool = True) -> Dict[str, Any]:
+        """
+        执行自定义SQL语句
+        
+        Args:
+            sql: SQL语句
+            params: SQL参数列表
+            fetch_results: 是否获取查询结果（对于SELECT语句）
+            
+        Returns:
+            执行结果字典，包含以下字段：
+            - success: 是否执行成功
+            - message: 执行消息
+            - results: 查询结果（仅当fetch_results=True且为SELECT语句时）
+            - affected_rows: 影响的行数（对于INSERT/UPDATE/DELETE语句）
+            - last_insert_id: 最后插入的ID（对于INSERT语句）
+        """
+        if not sql or not sql.strip():
+            return {
+                "success": False,
+                "message": "SQL语句不能为空",
+                "results": None,
+                "affected_rows": 0,
+                "last_insert_id": None
+            }
+        
+        # 安全检查：禁止某些危险操作
+        sql_upper = sql.strip().upper()
+        dangerous_keywords = ['DROP', 'TRUNCATE', 'ALTER TABLE', 'CREATE TABLE', 'CREATE INDEX']
+        
+        for keyword in dangerous_keywords:
+            if keyword in sql_upper:
+                return {
+                    "success": False,
+                    "message": f"出于安全考虑，禁止执行包含 '{keyword}' 的SQL语句",
+                    "results": None,
+                    "affected_rows": 0,
+                    "last_insert_id": None
+                }
+        
+        try:
+            # 执行SQL语句
+            if params:
+                self.cursor.execute(sql, params)
+            else:
+                self.cursor.execute(sql)
+            
+            result = {
+                "success": True,
+                "message": "SQL语句执行成功",
+                "results": None,
+                "affected_rows": self.cursor.rowcount,
+                "last_insert_id": None
+            }
+            
+            # 如果是查询语句且需要获取结果
+            if fetch_results and sql_upper.startswith('SELECT'):
+                rows = self.cursor.fetchall()
+                results = []
+                for row in rows:
+                    record = dict(row)
+                    # 尝试解析可能的JSON字段
+                    for key, value in record.items():
+                        if key == 'related' and value:
+                            try:
+                                record[key] = json.loads(value)
+                            except (json.JSONDecodeError, TypeError):
+                                pass  # 保持原值
+                    results.append(record)
+                result["results"] = results
+                result["message"] = f"查询成功，返回 {len(results)} 条记录"
+            
+            # 如果是插入语句，获取最后插入的ID
+            if sql_upper.startswith('INSERT'):
+                result["last_insert_id"] = self.cursor.lastrowid
+                result["message"] = f"插入成功，新记录ID: {result['last_insert_id']}"
+            
+            # 提交事务
+            self.connection.commit()
+            
+            return result
+            
+        except Exception as e:
+            # 回滚事务
+            self.connection.rollback()
+            return {
+                "success": False,
+                "message": f"SQL执行失败: {str(e)}",
+                "results": None,
+                "affected_rows": 0,
+                "last_insert_id": None
+            }
+    
+    def get_table_schema(self, table_name: str = None) -> Dict[str, Any]:
+        """
+        获取表结构信息
+        
+        Args:
+            table_name: 表名（可选，不提供则获取所有表的结构）
+            
+        Returns:
+            表结构信息字典
+        """
+        try:
+            if table_name:
+                if table_name not in self.tables:
+                    return {
+                        "success": False,
+                        "message": f"无效的表名: {table_name}",
+                        "schema": None
+                    }
+                
+                # 获取单个表的结构
+                self.cursor.execute(f"PRAGMA table_info({table_name})")
+                columns = self.cursor.fetchall()
+                
+                schema_info = {
+                    "table_name": table_name,
+                    "columns": [dict(col) for col in columns]
+                }
+                
+                return {
+                    "success": True,
+                    "message": f"成功获取表 {table_name} 的结构信息",
+                    "schema": schema_info
+                }
+            else:
+                # 获取所有表的结构
+                all_schemas = {}
+                for table in self.tables:
+                    self.cursor.execute(f"PRAGMA table_info({table})")
+                    columns = self.cursor.fetchall()
+                    
+                    all_schemas[table] = {
+                        "table_name": table,
+                        "columns": [dict(col) for col in columns]
+                    }
+                
+                return {
+                    "success": True,
+                    "message": "成功获取所有表的结构信息",
+                    "schema": all_schemas
+                }
+                
+        except Exception as e:
+            return {
+                "success": False,
+                "message": f"获取表结构失败: {str(e)}",
+                "schema": None
+            }
+    
     def close(self):
         """关闭数据库连接"""
         try:

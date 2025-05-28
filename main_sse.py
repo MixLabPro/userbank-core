@@ -236,6 +236,30 @@ async def list_tools() -> List[types.Tool]:
                 },
                 "required": []
             }
+        ),
+        types.Tool(
+            name="execute_custom_sql",
+            description="执行自定义SQL语句",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "sql": {"type": "string", "description": "要执行的SQL语句"},
+                    "params": {"type": "array", "items": {"type": "string"}, "description": "SQL参数列表（可选）"},
+                    "fetch_results": {"type": "boolean", "description": "是否获取查询结果（对于SELECT语句）", "default": True}
+                },
+                "required": ["sql"]
+            }
+        ),
+        types.Tool(
+            name="get_table_schema",
+            description="获取表结构信息",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "table_name": {"type": "string", "description": "表名（可选，不提供则获取所有表结构）", "enum": list(TABLE_DESCRIPTIONS.keys())}
+                },
+                "required": []
+            }
         )
     ]
 
@@ -571,6 +595,43 @@ async def call_tool(
                 result = {
                     "success": False,
                     "message": f"获取所有表内容失败: {str(e)}"
+                }
+            return [types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+        
+        elif name == "execute_custom_sql":
+            sql = arguments["sql"]
+            params = arguments.get("params", [])
+            fetch_results = arguments.get("fetch_results", True)
+            
+            result = db.execute_custom_sql(sql, params, fetch_results)
+            return [types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+        
+        elif name == "get_table_schema":
+            table_name = arguments.get("table_name")
+            
+            if table_name:
+                if table_name not in TABLE_DESCRIPTIONS:
+                    result = {
+                        "success": False,
+                        "message": f"无效的表名: {table_name}。有效的表名: {list(TABLE_DESCRIPTIONS.keys())}"
+                    }
+                else:
+                    schema = db.get_table_schema(table_name)
+                    result = {
+                        "success": True,
+                        "message": f"获取{TABLE_DESCRIPTIONS[table_name]}表结构信息",
+                        "schema": schema
+                    }
+            else:
+                # 获取所有表的结构信息
+                all_schemas = {}
+                for table in TABLE_DESCRIPTIONS.keys():
+                    schema = db.get_table_schema(table)
+                    all_schemas[table] = schema
+                result = {
+                    "success": True,
+                    "message": "获取所有表的结构信息",
+                    "all_schemas": all_schemas
                 }
             return [types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
         

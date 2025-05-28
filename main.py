@@ -556,3 +556,49 @@ def export_table_data(table_name: str, format: str = "json") -> Dict[str, Any]:
             "success": False,
             "message": f"导出表数据失败: {str(e)}"
         }
+
+# 执行自定义SQL语句
+@mcp.tool()
+def execute_custom_sql(sql: str, params: List[str] = None, fetch_results: bool = True) -> Dict[str, Any]:
+    """执行自定义SQL语句"""
+    try:
+        result = db.execute_custom_sql(sql, params, fetch_results)
+        return result
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"执行自定义SQL失败: {str(e)}"
+        }
+
+# 获取表结构信息
+@mcp.tool()
+def get_table_schema(table_name: str = None) -> Dict[str, Any]:
+    """获取表结构信息"""
+    try:
+        if table_name:
+            if table_name not in TABLE_DESCRIPTIONS:
+                return {
+                    "success": False,
+                    "message": f"无效的表名: {table_name}。有效的表名: {list(TABLE_DESCRIPTIONS.keys())}"
+                }
+            
+            schema_result = db.get_table_schema(table_name)
+            if schema_result.get("success"):
+                # 添加中文描述
+                schema_result["schema"]["description"] = TABLE_DESCRIPTIONS[table_name]
+                schema_result["message"] = f"获取{TABLE_DESCRIPTIONS[table_name]}表结构信息"
+            return schema_result
+        else:
+            # 获取所有表的结构信息
+            all_schemas_result = db.get_table_schema()
+            if all_schemas_result.get("success"):
+                # 为每个表添加中文描述
+                for table, schema_info in all_schemas_result["schema"].items():
+                    schema_info["description"] = TABLE_DESCRIPTIONS.get(table, "")
+            return all_schemas_result
+            
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"获取表结构失败: {str(e)}"
+        }
