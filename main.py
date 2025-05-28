@@ -5,13 +5,15 @@ FastMCP版本的个人画像数据管理系统
 from mcp.server.fastmcp import FastMCP
 from typing import List, Dict, Any, Optional
 import json
+import os
+from pathlib import Path
 
 from src.database import get_database
 
 # 创建FastMCP服务器实例
 mcp = FastMCP("个人画像数据管理系统")
 
-# 获取数据库实例
+# 获取数据库实例（现在会自动使用main.py同级目录的路径）
 db = get_database()
 
 # 定义所有表名和中文描述的映射
