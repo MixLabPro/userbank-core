@@ -1,6 +1,7 @@
 """
 个人画像数据管理系统 - SSE模式 (修正版)
 基于MCP官方文档的标准SSE实现
+基于database.md文档的完整实现
 """
 
 from mcp.server.sse import SseServerTransport
@@ -22,14 +23,21 @@ db = get_database()
 
 # 定义所有表名和中文描述的映射
 TABLE_DESCRIPTIONS = {
-    'belief': '信念',
-    'insight': '洞察', 
+    # 核心表
+    'persona': '人物档案',
+    'category': '分类体系',
+    'relations': '通用关联',
+    
+    # 主要数据表
+    'viewpoint': '观点',
+    'insight': '洞察',
     'focus': '关注点',
-    'long_term_goal': '长期目标',
-    'short_term_goal': '短期目标',
+    'goal': '目标',
     'preference': '偏好',
     'decision': '决策',
-    'methodology': '方法论'
+    'methodology': '方法论',
+    'experience': '经验',
+    'prediction': '预测'
 }
 
 # 创建MCP服务器实例
@@ -43,18 +51,78 @@ sse = SseServerTransport("/messages")
 async def list_tools() -> List[types.Tool]:
     """列出所有可用的工具"""
     return [
+        # ============ 人物档案相关操作 ============
         types.Tool(
-            name="add_belief",
-            description="添加信念记录",
+            name="get_persona",
+            description="获取用户画像信息",
+            inputSchema={
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        ),
+        types.Tool(
+            name="update_persona",
+            description="更新用户画像信息",
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "content": {"type": "string", "description": "信念内容"},
-                    "related": {"type": "array", "items": {"type": "string"}, "description": "相关主题列表"}
+                    "name": {"type": "string", "description": "用户姓名"},
+                    "gender": {"type": "string", "description": "性别", "enum": ["male", "female", "other"]},
+                    "personality": {"type": "string", "description": "性格描述"},
+                    "avatar_url": {"type": "string", "description": "头像链接"},
+                    "bio": {"type": "string", "description": "个人简介"}
                 },
-                "required": ["content"]
+                "required": []
             }
         ),
+        
+        # ============ 分类管理 ============
+        types.Tool(
+            name="get_categories",
+            description="获取分类列表",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "first_level": {"type": "string", "description": "一级分类过滤"}
+                },
+                "required": []
+            }
+        ),
+        types.Tool(
+            name="add_category",
+            description="添加新分类",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "first_level": {"type": "string", "description": "一级分类"},
+                    "second_level": {"type": "string", "description": "二级分类"},
+                    "description": {"type": "string", "description": "分类描述"}
+                },
+                "required": ["first_level"]
+            }
+        ),
+        
+        # ============ 观点管理 ============
+        types.Tool(
+            name="add_viewpoint",
+            description="添加观点记录",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "content": {"type": "string", "description": "观点内容"},
+                    "subject": {"type": "string", "description": "观点主题"},
+                    "stance": {"type": "integer", "description": "观点立场(-5到5)", "minimum": -5, "maximum": 5},
+                    "source": {"type": "string", "description": "观点来源"},
+                    "time_period": {"type": "string", "description": "时间段"},
+                    "reference_urls": {"type": "array", "items": {"type": "string"}, "description": "参考链接"},
+                    "category_id": {"type": "integer", "description": "分类ID"}
+                },
+                "required": ["content", "subject"]
+            }
+        ),
+        
+        # ============ 洞察管理 ============
         types.Tool(
             name="add_insight",
             description="添加洞察记录",
@@ -62,11 +130,16 @@ async def list_tools() -> List[types.Tool]:
                 "type": "object",
                 "properties": {
                     "content": {"type": "string", "description": "洞察内容"},
-                    "related": {"type": "array", "items": {"type": "string"}, "description": "相关主题列表"}
+                    "trigger_event": {"type": "string", "description": "触发事件"},
+                    "impact_level": {"type": "string", "description": "影响程度", "enum": ["high", "medium", "low"]},
+                    "reference_urls": {"type": "array", "items": {"type": "string"}, "description": "参考链接"},
+                    "category_id": {"type": "integer", "description": "分类ID"}
                 },
                 "required": ["content"]
             }
         ),
+        
+        # ============ 关注点管理 ============
         types.Tool(
             name="add_focus",
             description="添加关注点记录",
@@ -74,35 +147,35 @@ async def list_tools() -> List[types.Tool]:
                 "type": "object",
                 "properties": {
                     "content": {"type": "string", "description": "关注点内容"},
-                    "related": {"type": "array", "items": {"type": "string"}, "description": "相关主题列表"}
+                    "priority": {"type": "integer", "description": "优先级(1-10)", "minimum": 1, "maximum": 10},
+                    "status": {"type": "string", "description": "状态", "enum": ["active", "paused", "completed"]},
+                    "context": {"type": "string", "description": "上下文"},
+                    "deadline": {"type": "string", "description": "截止日期"},
+                    "category_id": {"type": "integer", "description": "分类ID"}
                 },
                 "required": ["content"]
             }
         ),
+        
+        # ============ 目标管理 ============
         types.Tool(
-            name="add_long_term_goal",
-            description="添加长期目标记录",
+            name="add_goal",
+            description="添加目标记录",
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "content": {"type": "string", "description": "长期目标内容"},
-                    "related": {"type": "array", "items": {"type": "string"}, "description": "相关主题列表"}
+                    "content": {"type": "string", "description": "目标内容"},
+                    "type": {"type": "string", "description": "目标类型", "enum": ["long_term", "short_term"]},
+                    "deadline": {"type": "string", "description": "截止日期"},
+                    "progress": {"type": "integer", "description": "进度(0-100)", "minimum": 0, "maximum": 100},
+                    "status": {"type": "string", "description": "状态", "enum": ["planning", "in_progress", "completed", "abandoned"]},
+                    "category_id": {"type": "integer", "description": "分类ID"}
                 },
-                "required": ["content"]
+                "required": ["content", "type"]
             }
         ),
-        types.Tool(
-            name="add_short_term_goal",
-            description="添加短期目标记录",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "content": {"type": "string", "description": "短期目标内容"},
-                    "related": {"type": "array", "items": {"type": "string"}, "description": "相关主题列表"}
-                },
-                "required": ["content"]
-            }
-        ),
+        
+        # ============ 偏好管理 ============
         types.Tool(
             name="add_preference",
             description="添加偏好记录",
@@ -110,11 +183,15 @@ async def list_tools() -> List[types.Tool]:
                 "type": "object",
                 "properties": {
                     "content": {"type": "string", "description": "偏好内容"},
-                    "related": {"type": "array", "items": {"type": "string"}, "description": "相关主题列表"}
+                    "strength": {"type": "string", "description": "偏好强度", "enum": ["strong", "moderate", "flexible"]},
+                    "context": {"type": "string", "description": "适用场景"},
+                    "category_id": {"type": "integer", "description": "分类ID"}
                 },
                 "required": ["content"]
             }
         ),
+        
+        # ============ 决策管理 ============
         types.Tool(
             name="add_decision",
             description="添加决策记录",
@@ -122,11 +199,16 @@ async def list_tools() -> List[types.Tool]:
                 "type": "object",
                 "properties": {
                     "content": {"type": "string", "description": "决策内容"},
-                    "related": {"type": "array", "items": {"type": "string"}, "description": "相关主题列表"}
+                    "reasoning": {"type": "string", "description": "决策理由"},
+                    "outcome": {"type": "string", "description": "决策结果"},
+                    "domain": {"type": "string", "description": "决策领域"},
+                    "category_id": {"type": "integer", "description": "分类ID"}
                 },
                 "required": ["content"]
             }
         ),
+        
+        # ============ 方法论管理 ============
         types.Tool(
             name="add_methodology",
             description="添加方法论记录",
@@ -134,11 +216,86 @@ async def list_tools() -> List[types.Tool]:
                 "type": "object",
                 "properties": {
                     "content": {"type": "string", "description": "方法论内容"},
-                    "related": {"type": "array", "items": {"type": "string"}, "description": "相关主题列表"}
+                    "type": {"type": "string", "description": "方法论类型"},
+                    "effectiveness": {"type": "string", "description": "有效性", "enum": ["proven", "experimental", "theoretical"]},
+                    "use_cases": {"type": "string", "description": "适用场景"},
+                    "reference_urls": {"type": "array", "items": {"type": "string"}, "description": "参考链接"},
+                    "category_id": {"type": "integer", "description": "分类ID"}
                 },
                 "required": ["content"]
             }
         ),
+        
+        # ============ 经验管理 ============
+        types.Tool(
+            name="add_experience",
+            description="添加经验记录",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "content": {"type": "string", "description": "经验内容"},
+                    "field": {"type": "string", "description": "领域"},
+                    "expertise_level": {"type": "string", "description": "专业程度", "enum": ["expert", "proficient", "intermediate", "beginner"]},
+                    "years": {"type": "integer", "description": "经验年数"},
+                    "key_learnings": {"type": "string", "description": "关键学习"},
+                    "reference_urls": {"type": "array", "items": {"type": "string"}, "description": "参考链接"},
+                    "category_id": {"type": "integer", "description": "分类ID"}
+                },
+                "required": ["content", "field"]
+            }
+        ),
+        
+        # ============ 预测管理 ============
+        types.Tool(
+            name="add_prediction",
+            description="添加预测记录",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "content": {"type": "string", "description": "预测内容"},
+                    "timeframe": {"type": "string", "description": "时间范围"},
+                    "basis": {"type": "string", "description": "预测依据"},
+                    "verification_status": {"type": "string", "description": "验证状态", "enum": ["correct", "incorrect", "pending", "partially_correct"]},
+                    "reference_urls": {"type": "array", "items": {"type": "string"}, "description": "参考链接"},
+                    "category_id": {"type": "integer", "description": "分类ID"}
+                },
+                "required": ["content"]
+            }
+        ),
+        
+        # ============ 关联关系管理 ============
+        types.Tool(
+            name="add_relation",
+            description="添加关联关系",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "source_table": {"type": "string", "description": "源表名", "enum": list(TABLE_DESCRIPTIONS.keys())},
+                    "source_id": {"type": "integer", "description": "源记录ID"},
+                    "target_table": {"type": "string", "description": "目标表名", "enum": list(TABLE_DESCRIPTIONS.keys())},
+                    "target_id": {"type": "integer", "description": "目标记录ID"},
+                    "relation_type": {"type": "string", "description": "关联类型", "enum": ["inspired_by", "conflicts_with", "supports", "leads_to", "based_on", "similar_to", "opposite_to", "caused_by"]},
+                    "strength": {"type": "string", "description": "关联强度", "enum": ["strong", "medium", "weak"]},
+                    "note": {"type": "string", "description": "关联说明"}
+                },
+                "required": ["source_table", "source_id", "target_table", "target_id", "relation_type"]
+            }
+        ),
+        types.Tool(
+            name="get_relations",
+            description="获取记录的关联关系",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "table_name": {"type": "string", "description": "表名", "enum": list(TABLE_DESCRIPTIONS.keys())},
+                    "record_id": {"type": "integer", "description": "记录ID"},
+                    "relation_type": {"type": "string", "description": "关联类型过滤"}
+                },
+                "required": ["table_name", "record_id"]
+            }
+        ),
+        
+        # ============ 通用CRUD操作 ============
         types.Tool(
             name="update_record",
             description="更新记录",
@@ -146,9 +303,7 @@ async def list_tools() -> List[types.Tool]:
                 "type": "object",
                 "properties": {
                     "table_name": {"type": "string", "description": "表名", "enum": list(TABLE_DESCRIPTIONS.keys())},
-                    "record_id": {"type": "integer", "description": "记录ID"},
-                    "content": {"type": "string", "description": "新内容"},
-                    "related": {"type": "array", "items": {"type": "string"}, "description": "相关主题列表"}
+                    "record_id": {"type": "integer", "description": "记录ID"}
                 },
                 "required": ["table_name", "record_id"]
             }
@@ -185,9 +340,13 @@ async def list_tools() -> List[types.Tool]:
                 "properties": {
                     "table_name": {"type": "string", "description": "表名", "enum": list(TABLE_DESCRIPTIONS.keys())},
                     "keyword": {"type": "string", "description": "搜索关键词"},
-                    "related_topic": {"type": "string", "description": "相关主题"},
+                    "category_id": {"type": "integer", "description": "分类ID"},
+                    "status": {"type": "string", "description": "状态"},
+                    "type": {"type": "string", "description": "类型"},
                     "limit": {"type": "integer", "description": "返回记录数限制", "default": 20},
-                    "offset": {"type": "integer", "description": "偏移量", "default": 0}
+                    "offset": {"type": "integer", "description": "偏移量", "default": 0},
+                    "order_by": {"type": "string", "description": "排序字段", "default": "created_time"},
+                    "order_desc": {"type": "boolean", "description": "是否降序", "default": True}
                 },
                 "required": ["table_name"]
             }
@@ -205,6 +364,8 @@ async def list_tools() -> List[types.Tool]:
                 "required": ["table_name"]
             }
         ),
+        
+        # ============ 统计和信息查询 ============
         types.Tool(
             name="get_table_stats",
             description="获取表统计信息",
@@ -260,6 +421,63 @@ async def list_tools() -> List[types.Tool]:
                 },
                 "required": []
             }
+        ),
+        
+        # ============ 高级查询方法 ============
+        types.Tool(
+            name="get_viewpoints_by_subject",
+            description="根据主题获取观点",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "subject": {"type": "string", "description": "观点主题"},
+                    "time_period": {"type": "string", "description": "时间段过滤"}
+                },
+                "required": ["subject"]
+            }
+        ),
+        types.Tool(
+            name="get_active_focuses",
+            description="获取活跃的关注点",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "priority_threshold": {"type": "integer", "description": "优先级阈值"}
+                },
+                "required": []
+            }
+        ),
+        types.Tool(
+            name="get_goals_by_status",
+            description="根据状态获取目标",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "status": {"type": "string", "description": "目标状态"},
+                    "type": {"type": "string", "description": "目标类型过滤"}
+                },
+                "required": ["status"]
+            }
+        ),
+        types.Tool(
+            name="get_high_impact_insights",
+            description="获取高影响力的洞察",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "limit": {"type": "integer", "description": "返回记录数限制", "default": 10}
+                },
+                "required": []
+            }
+        ),
+        types.Tool(
+            name="get_expertise_areas",
+            description="获取专业领域分析",
+            inputSchema={
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
         )
     ]
 
@@ -271,115 +489,328 @@ async def call_tool(
 ) -> List[types.TextContent]:
     """统一处理所有工具调用"""
     try:
-        if name == "add_belief":
-            content = arguments["content"]
-            related = arguments.get("related")
-            record_id = db.insert_record('belief', content, related)
+        # ============ 人物档案相关操作 ============
+        if name == "get_persona":
+            persona = db.get_persona()
+            if persona:
+                result = {
+                    "success": True,
+                    "message": "成功获取用户画像",
+                    "persona": persona
+                }
+            else:
+                result = {
+                    "success": False,
+                    "message": "未找到用户画像信息"
+                }
+            return [types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+        
+        elif name == "update_persona":
+            update_data = {}
+            for field in ['name', 'gender', 'personality', 'avatar_url', 'bio']:
+                if field in arguments and arguments[field] is not None:
+                    update_data[field] = arguments[field]
+            
+            if not update_data:
+                result = {
+                    "success": False,
+                    "message": "没有提供要更新的字段"
+                }
+            else:
+                success = db.update_persona(**update_data)
+                if success:
+                    result = {
+                        "success": True,
+                        "message": "成功更新用户画像",
+                        "updated_fields": list(update_data.keys())
+                    }
+                else:
+                    result = {
+                        "success": False,
+                        "message": "更新用户画像失败"
+                    }
+            return [types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+        
+        # ============ 分类管理 ============
+        elif name == "get_categories":
+            first_level = arguments.get("first_level")
+            categories = db.get_categories(first_level)
             result = {
                 "success": True,
-                "message": f"成功添加信念记录",
-                "record_id": record_id,
-                "content": content,
-                "related": related or []
+                "message": f"成功获取 {len(categories)} 个分类",
+                "categories": categories
             }
             return [types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
         
+        elif name == "add_category":
+            first_level = arguments["first_level"]
+            second_level = arguments.get("second_level")
+            description = arguments.get("description")
+            
+            category_id = db.insert_record('category',
+                                         first_level=first_level,
+                                         second_level=second_level,
+                                         description=description,
+                                         is_active=1)
+            result = {
+                "success": True,
+                "message": "成功添加分类",
+                "category_id": category_id,
+                "first_level": first_level,
+                "second_level": second_level
+            }
+            return [types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+        
+        # ============ 观点管理 ============
+        elif name == "add_viewpoint":
+            content = arguments["content"]
+            subject = arguments["subject"]
+            stance = arguments.get("stance")
+            source = arguments.get("source")
+            time_period = arguments.get("time_period")
+            reference_urls = arguments.get("reference_urls", [])
+            category_id = arguments.get("category_id")
+            
+            record_id = db.insert_record('viewpoint',
+                                       content=content,
+                                       subject=subject,
+                                       stance=stance,
+                                       source=source,
+                                       time_period=time_period,
+                                       reference_urls=reference_urls,
+                                       category_id=category_id)
+            result = {
+                "success": True,
+                "message": "成功添加观点记录",
+                "record_id": record_id,
+                "content": content,
+                "subject": subject
+            }
+            return [types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+        
+        # ============ 洞察管理 ============
         elif name == "add_insight":
             content = arguments["content"]
-            related = arguments.get("related")
-            record_id = db.insert_record('insight', content, related)
+            trigger_event = arguments.get("trigger_event")
+            impact_level = arguments.get("impact_level", "medium")
+            reference_urls = arguments.get("reference_urls", [])
+            category_id = arguments.get("category_id")
+            
+            record_id = db.insert_record('insight',
+                                       content=content,
+                                       trigger_event=trigger_event,
+                                       impact_level=impact_level,
+                                       reference_urls=reference_urls,
+                                       category_id=category_id)
             result = {
                 "success": True,
-                "message": f"成功添加洞察记录",
+                "message": "成功添加洞察记录",
                 "record_id": record_id,
                 "content": content,
-                "related": related or []
+                "impact_level": impact_level
             }
             return [types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
         
+        # ============ 关注点管理 ============
         elif name == "add_focus":
             content = arguments["content"]
-            related = arguments.get("related")
-            record_id = db.insert_record('focus', content, related)
+            priority = arguments.get("priority")
+            status = arguments.get("status", "active")
+            context = arguments.get("context")
+            deadline = arguments.get("deadline")
+            category_id = arguments.get("category_id")
+            
+            record_id = db.insert_record('focus',
+                                       content=content,
+                                       priority=priority,
+                                       status=status,
+                                       context=context,
+                                       deadline=deadline,
+                                       category_id=category_id)
             result = {
                 "success": True,
-                "message": f"成功添加关注点记录",
+                "message": "成功添加关注点记录",
                 "record_id": record_id,
                 "content": content,
-                "related": related or []
+                "priority": priority,
+                "status": status
             }
             return [types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
         
-        elif name == "add_long_term_goal":
+        # ============ 目标管理 ============
+        elif name == "add_goal":
             content = arguments["content"]
-            related = arguments.get("related")
-            record_id = db.insert_record('long_term_goal', content, related)
+            goal_type = arguments["type"]
+            deadline = arguments.get("deadline")
+            progress = arguments.get("progress", 0)
+            status = arguments.get("status", "planning")
+            category_id = arguments.get("category_id")
+            
+            record_id = db.insert_record('goal',
+                                       content=content,
+                                       type=goal_type,
+                                       deadline=deadline,
+                                       progress=progress,
+                                       status=status,
+                                       category_id=category_id)
             result = {
                 "success": True,
-                "message": f"成功添加长期目标记录",
+                "message": f"成功添加{goal_type}目标记录",
                 "record_id": record_id,
                 "content": content,
-                "related": related or []
+                "type": goal_type,
+                "status": status
             }
             return [types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
         
-        elif name == "add_short_term_goal":
-            content = arguments["content"]
-            related = arguments.get("related")
-            record_id = db.insert_record('short_term_goal', content, related)
-            result = {
-                "success": True,
-                "message": f"成功添加短期目标记录",
-                "record_id": record_id,
-                "content": content,
-                "related": related or []
-            }
-            return [types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
-        
+        # ============ 偏好管理 ============
         elif name == "add_preference":
             content = arguments["content"]
-            related = arguments.get("related")
-            record_id = db.insert_record('preference', content, related)
+            strength = arguments.get("strength", "moderate")
+            context = arguments.get("context")
+            category_id = arguments.get("category_id")
+            
+            record_id = db.insert_record('preference',
+                                       content=content,
+                                       strength=strength,
+                                       context=context,
+                                       category_id=category_id)
             result = {
                 "success": True,
-                "message": f"成功添加偏好记录",
+                "message": "成功添加偏好记录",
                 "record_id": record_id,
                 "content": content,
-                "related": related or []
+                "strength": strength
             }
             return [types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
         
+        # ============ 决策管理 ============
         elif name == "add_decision":
             content = arguments["content"]
-            related = arguments.get("related")
-            record_id = db.insert_record('decision', content, related)
+            reasoning = arguments.get("reasoning")
+            outcome = arguments.get("outcome")
+            domain = arguments.get("domain")
+            category_id = arguments.get("category_id")
+            
+            record_id = db.insert_record('decision',
+                                       content=content,
+                                       reasoning=reasoning,
+                                       outcome=outcome,
+                                       domain=domain,
+                                       category_id=category_id)
             result = {
                 "success": True,
-                "message": f"成功添加决策记录",
+                "message": "成功添加决策记录",
                 "record_id": record_id,
                 "content": content,
-                "related": related or []
+                "domain": domain
             }
             return [types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
         
+        # ============ 方法论管理 ============
         elif name == "add_methodology":
             content = arguments["content"]
-            related = arguments.get("related")
-            record_id = db.insert_record('methodology', content, related)
+            method_type = arguments.get("type")
+            effectiveness = arguments.get("effectiveness", "experimental")
+            use_cases = arguments.get("use_cases")
+            reference_urls = arguments.get("reference_urls", [])
+            category_id = arguments.get("category_id")
+            
+            record_id = db.insert_record('methodology',
+                                       content=content,
+                                       type=method_type,
+                                       effectiveness=effectiveness,
+                                       use_cases=use_cases,
+                                       reference_urls=reference_urls,
+                                       category_id=category_id)
             result = {
                 "success": True,
-                "message": f"成功添加方法论记录",
+                "message": "成功添加方法论记录",
                 "record_id": record_id,
                 "content": content,
-                "related": related or []
+                "effectiveness": effectiveness
             }
             return [types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
         
-        elif name == "update_record":
+        # ============ 经验管理 ============
+        elif name == "add_experience":
+            content = arguments["content"]
+            field = arguments["field"]
+            expertise_level = arguments.get("expertise_level", "beginner")
+            years = arguments.get("years", 0)
+            key_learnings = arguments.get("key_learnings")
+            reference_urls = arguments.get("reference_urls", [])
+            category_id = arguments.get("category_id")
+            
+            record_id = db.insert_record('experience',
+                                       content=content,
+                                       field=field,
+                                       expertise_level=expertise_level,
+                                       years=years,
+                                       key_learnings=key_learnings,
+                                       reference_urls=reference_urls,
+                                       category_id=category_id)
+            result = {
+                "success": True,
+                "message": "成功添加经验记录",
+                "record_id": record_id,
+                "content": content,
+                "field": field,
+                "expertise_level": expertise_level
+            }
+            return [types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+        
+        # ============ 预测管理 ============
+        elif name == "add_prediction":
+            content = arguments["content"]
+            timeframe = arguments.get("timeframe")
+            basis = arguments.get("basis")
+            verification_status = arguments.get("verification_status", "pending")
+            reference_urls = arguments.get("reference_urls", [])
+            category_id = arguments.get("category_id")
+            
+            record_id = db.insert_record('prediction',
+                                       content=content,
+                                       timeframe=timeframe,
+                                       basis=basis,
+                                       verification_status=verification_status,
+                                       reference_urls=reference_urls,
+                                       category_id=category_id)
+            result = {
+                "success": True,
+                "message": "成功添加预测记录",
+                "record_id": record_id,
+                "content": content,
+                "timeframe": timeframe
+            }
+            return [types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+        
+        # ============ 关联关系管理 ============
+        elif name == "add_relation":
+            source_table = arguments["source_table"]
+            source_id = arguments["source_id"]
+            target_table = arguments["target_table"]
+            target_id = arguments["target_id"]
+            relation_type = arguments["relation_type"]
+            strength = arguments.get("strength", "medium")
+            note = arguments.get("note")
+            
+            relation_id = db.add_relation(source_table, source_id, target_table, target_id,
+                                        relation_type, strength, note)
+            result = {
+                "success": True,
+                "message": "成功添加关联关系",
+                "relation_id": relation_id,
+                "source": f"{source_table}#{source_id}",
+                "target": f"{target_table}#{target_id}",
+                "relation_type": relation_type
+            }
+            return [types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+        
+        elif name == "get_relations":
             table_name = arguments["table_name"]
             record_id = arguments["record_id"]
-            content = arguments.get("content")
-            related = arguments.get("related")
+            relation_type = arguments.get("relation_type")
             
             if table_name not in TABLE_DESCRIPTIONS:
                 result = {
@@ -387,13 +818,36 @@ async def call_tool(
                     "message": f"无效的表名: {table_name}。有效的表名: {list(TABLE_DESCRIPTIONS.keys())}"
                 }
             else:
-                success = db.update_record(table_name, record_id, content, related)
+                relations = db.get_relations(table_name, record_id, relation_type)
+                result = {
+                    "success": True,
+                    "message": f"成功获取 {len(relations)} 个关联关系",
+                    "relations": relations
+                }
+            return [types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+        
+        # ============ 通用CRUD操作 ============
+        elif name == "update_record":
+            table_name = arguments["table_name"]
+            record_id = arguments["record_id"]
+            
+            if table_name not in TABLE_DESCRIPTIONS:
+                result = {
+                    "success": False,
+                    "message": f"无效的表名: {table_name}。有效的表名: {list(TABLE_DESCRIPTIONS.keys())}"
+                }
+            else:
+                # 提取除table_name和record_id之外的所有参数作为更新字段
+                update_data = {k: v for k, v in arguments.items() if k not in ['table_name', 'record_id']}
+                
+                success = db.update_record(table_name, record_id, **update_data)
                 if success:
                     result = {
                         "success": True,
                         "message": f"成功更新{TABLE_DESCRIPTIONS[table_name]}记录",
                         "record_id": record_id,
-                        "table_name": table_name
+                        "table_name": table_name,
+                        "updated_fields": list(update_data.keys())
                     }
                 else:
                     result = {
@@ -453,10 +907,6 @@ async def call_tool(
         
         elif name == "search_records":
             table_name = arguments["table_name"]
-            keyword = arguments.get("keyword")
-            related_topic = arguments.get("related_topic")
-            limit = arguments.get("limit", 20)
-            offset = arguments.get("offset", 0)
             
             if table_name not in TABLE_DESCRIPTIONS:
                 result = {
@@ -464,18 +914,27 @@ async def call_tool(
                     "message": f"无效的表名: {table_name}。有效的表名: {list(TABLE_DESCRIPTIONS.keys())}"
                 }
             else:
-                records = db.search_records(table_name, keyword, related_topic, limit, offset)
+                search_params = {
+                    'keyword': arguments.get('keyword'),
+                    'category_id': arguments.get('category_id'),
+                    'status': arguments.get('status'),
+                    'type': arguments.get('type'),
+                    'limit': arguments.get('limit', 20),
+                    'offset': arguments.get('offset', 0),
+                    'order_by': arguments.get('order_by', 'created_time'),
+                    'order_desc': arguments.get('order_desc', True)
+                }
+                
+                # 移除None值
+                search_params = {k: v for k, v in search_params.items() if v is not None}
+                
+                records = db.search_records(table_name, **search_params)
                 result = {
                     "success": True,
                     "message": f"在{TABLE_DESCRIPTIONS[table_name]}表中搜索到 {len(records)} 条记录",
                     "table_name": table_name,
                     "records": records,
-                    "search_params": {
-                        "keyword": keyword,
-                        "related_topic": related_topic,
-                        "limit": limit,
-                        "offset": offset
-                    }
+                    "search_params": search_params
                 }
             return [types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
         
@@ -503,6 +962,7 @@ async def call_tool(
                 }
             return [types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
         
+        # ============ 统计和信息查询 ============
         elif name == "get_table_stats":
             table_name = arguments.get("table_name")
             
@@ -522,11 +982,9 @@ async def call_tool(
                     }
             else:
                 # 获取所有表的统计信息
-                all_stats = {}
-                for table in TABLE_DESCRIPTIONS.keys():
-                    stats = db.get_table_stats(table)
+                all_stats = db.get_table_stats()
+                for table, stats in all_stats.items():
                     stats['table_description'] = TABLE_DESCRIPTIONS[table]
-                    all_stats[table] = stats
                 result = {
                     "success": True,
                     "message": "获取所有表的统计信息",
@@ -616,22 +1074,106 @@ async def call_tool(
                         "message": f"无效的表名: {table_name}。有效的表名: {list(TABLE_DESCRIPTIONS.keys())}"
                     }
                 else:
-                    schema = db.get_table_schema(table_name)
-                    result = {
-                        "success": True,
-                        "message": f"获取{TABLE_DESCRIPTIONS[table_name]}表结构信息",
-                        "schema": schema
-                    }
+                    result = db.get_table_schema(table_name)
             else:
                 # 获取所有表的结构信息
-                all_schemas = {}
-                for table in TABLE_DESCRIPTIONS.keys():
-                    schema = db.get_table_schema(table)
-                    all_schemas[table] = schema
+                result = db.get_table_schema()
+            return [types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+        
+        # ============ 高级查询方法 ============
+        elif name == "get_viewpoints_by_subject":
+            subject = arguments["subject"]
+            time_period = arguments.get("time_period")
+            
+            search_params = {'keyword': subject}
+            if time_period:
+                search_params['time_period'] = time_period
+            
+            records = db.search_records('viewpoint', **search_params)
+            result = {
+                "success": True,
+                "message": f"找到 {len(records)} 个关于'{subject}'的观点",
+                "subject": subject,
+                "time_period": time_period,
+                "viewpoints": records
+            }
+            return [types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+        
+        elif name == "get_active_focuses":
+            priority_threshold = arguments.get("priority_threshold")
+            
+            if priority_threshold:
+                # 使用自定义SQL来实现优先级过滤
+                sql = "SELECT * FROM focus WHERE status = 'active' AND priority >= ? ORDER BY priority DESC"
+                result = db.execute_custom_sql(sql, [priority_threshold])
+                if result['success']:
+                    records = result['results']
+                    result = {
+                        "success": True,
+                        "message": f"找到 {len(records)} 个活跃的关注点",
+                        "focuses": records
+                    }
+                else:
+                    return [types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+            else:
+                records = db.search_records('focus', status='active')
                 result = {
                     "success": True,
-                    "message": "获取所有表的结构信息",
-                    "all_schemas": all_schemas
+                    "message": f"找到 {len(records)} 个活跃的关注点",
+                    "focuses": records
+                }
+            return [types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+        
+        elif name == "get_goals_by_status":
+            status = arguments["status"]
+            goal_type = arguments.get("type")
+            
+            search_params = {'status': status}
+            if goal_type:
+                search_params['type'] = goal_type
+            
+            records = db.search_records('goal', **search_params)
+            result = {
+                "success": True,
+                "message": f"找到 {len(records)} 个状态为'{status}'的目标",
+                "status": status,
+                "type": goal_type,
+                "goals": records
+            }
+            return [types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+        
+        elif name == "get_high_impact_insights":
+            limit = arguments.get("limit", 10)
+            
+            records = db.search_records('insight', impact_level='high', limit=limit)
+            result = {
+                "success": True,
+                "message": f"找到 {len(records)} 个高影响力的洞察",
+                "insights": records
+            }
+            return [types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+        
+        elif name == "get_expertise_areas":
+            # 使用自定义SQL查询专业领域统计
+            sql = """
+            SELECT field, expertise_level, COUNT(*) as count, AVG(years) as avg_years
+            FROM experience 
+            GROUP BY field, expertise_level
+            ORDER BY field, 
+                     CASE expertise_level 
+                         WHEN 'expert' THEN 4 
+                         WHEN 'proficient' THEN 3 
+                         WHEN 'intermediate' THEN 2 
+                         WHEN 'beginner' THEN 1 
+                     END DESC
+            """
+            
+            result = db.execute_custom_sql(sql)
+            if result['success']:
+                result = {
+                    "success": True,
+                    "message": f"成功分析专业领域，共 {len(result['results'])} 个领域级别组合",
+                    "expertise_analysis": result['results']
                 }
             return [types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
         
