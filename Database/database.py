@@ -10,7 +10,6 @@ import json
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Tuple
 from pathlib import Path
-import os
 
 class ProfileDatabase:
     """个人画像数据库管理类"""
@@ -588,12 +587,5 @@ def get_database() -> ProfileDatabase:
     """获取数据库实例（单例模式）"""
     global db_instance
     if db_instance is None:
-        # 获取当前文件（database.py）的目录
-        current_dir = Path(__file__).parent
-        # 获取项目根目录（main.py所在目录）
-        project_root = current_dir.parent
-        # 构建数据库文件的绝对路径
-        db_path = project_root / "profile_data.db"
-        
-        db_instance = ProfileDatabase(str(db_path))
+        db_instance = ProfileDatabase()
     return db_instance
