@@ -7,7 +7,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from Database.database import get_database
+from src.database import get_database
 import json
 
 def test_custom_sql():
