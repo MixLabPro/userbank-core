@@ -8,7 +8,7 @@ import json
 import os
 from pathlib import Path
 
-from src.database import get_database
+from Database.database import get_database
 
 # 创建FastMCP服务器实例
 mcp = FastMCP("个人画像数据管理系统")

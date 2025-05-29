@@ -15,7 +15,7 @@ import asyncio
 from typing import List, Dict, Any, Optional
 import json
 
-from src.database import get_database
+from Database.database import get_database
 
 # 获取数据库实例
 db = get_database()
