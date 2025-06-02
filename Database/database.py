@@ -3,7 +3,7 @@
 Database Management Module
 
 负责创建和管理个人画像数据结构的SQLite数据库
-基于database.md文档的完整实现
+基于database 0.3.md文档的完整实现
 """
 
 import sqlite3
@@ -16,18 +16,23 @@ import os
 class ProfileDatabase:
     """个人画像数据库管理类"""
     
-    def __init__(self, db_path: str = "profile_data.db"):
+    def __init__(self, db_path: str = None):
         """
         初始化数据库连接
         
         Args:
-            db_path: 数据库文件路径
+            db_path: 数据库文件路径，如果为None则使用main.py同目录下的profile_data.db
         """
-        self.db_path = db_path
+        if db_path is None:
+            # 获取当前文件所在目录的上级目录（即main.py所在目录）
+            current_dir = Path(__file__).parent.parent
+            self.db_path = str(current_dir / "profile_data.db")
+        else:
+            self.db_path = db_path
         self.connection = None
         self.cursor = None
         
-        # 定义所有表名和中文描述
+        # 定义所有表名和中文描述（基于database 0.3.md）
         self.tables = {
             # 核心表
             'persona': '人物档案',
@@ -40,15 +45,14 @@ class ProfileDatabase:
             'focus': '关注点',
             'goal': '目标',
             'preference': '偏好',
-            'decision': '决策',
             'methodology': '方法论',
-            'experience': '经验',
-            'prediction': '预测'
+            'prediction': '预测',
+            'memory': '记忆'
         }
         
         try:
             # 检查数据库文件是否存在
-            db_exists = Path(db_path).exists()
+            db_exists = Path(self.db_path).exists()
             
             self._connect()
             
@@ -95,17 +99,18 @@ class ProfileDatabase:
             return False
     
     def _create_tables(self):
-        """创建所有数据表"""
+        """创建所有数据表（基于database 0.3.md）"""
         try:
             # 1. Persona（人物档案表）- 系统核心
             self.cursor.execute("""
                 CREATE TABLE IF NOT EXISTS persona (
-                    id INTEGER PRIMARY KEY CHECK (id = 1),
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
                     name TEXT NOT NULL,
-                    gender TEXT CHECK (gender IN ('male', 'female', 'other')),
+                    gender TEXT,
                     personality TEXT,
                     avatar_url TEXT,
                     bio TEXT,
+                    privacy_level TEXT CHECK(privacy_level IN ('public', 'private')) DEFAULT 'public',
                     created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
@@ -116,12 +121,12 @@ class ProfileDatabase:
                 CREATE TABLE IF NOT EXISTS category (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     first_level TEXT NOT NULL,
-                    second_level TEXT,
+                    second_level TEXT NOT NULL,
                     description TEXT,
-                    is_active BOOLEAN DEFAULT 1,
+                    is_active BOOLEAN DEFAULT true,
+                    privacy_level TEXT CHECK(privacy_level IN ('public', 'private')) DEFAULT 'public',
                     created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    UNIQUE(first_level, second_level)
+                    updated_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
             
@@ -133,12 +138,10 @@ class ProfileDatabase:
                     source_id INTEGER NOT NULL,
                     target_table TEXT NOT NULL,
                     target_id INTEGER NOT NULL,
-                    relation_type TEXT NOT NULL CHECK (relation_type IN (
-                        'inspired_by', 'conflicts_with', 'supports', 'leads_to', 
-                        'based_on', 'similar_to', 'opposite_to', 'caused_by'
-                    )),
-                    strength TEXT DEFAULT 'medium' CHECK (strength IN ('strong', 'medium', 'weak')),
+                    relation_type TEXT NOT NULL,
+                    strength TEXT CHECK(strength IN ('strong', 'medium', 'weak')),
                     note TEXT,
+                    privacy_level TEXT CHECK(privacy_level IN ('public', 'private')) DEFAULT 'public',
                     created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
@@ -149,16 +152,15 @@ class ProfileDatabase:
                 CREATE TABLE IF NOT EXISTS viewpoint (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     content TEXT NOT NULL,
-                    subject TEXT NOT NULL,
-                    stance INTEGER CHECK (stance BETWEEN -5 AND 5),  -- -5强烈反对到5强烈支持
-                    source TEXT,
-                    persona_id INTEGER DEFAULT 1,
-                    time_period TEXT,
-                    reference_urls TEXT,  -- JSON格式存储URL数组
+                    source_people TEXT,
+                    keywords TEXT,
+                    source_app TEXT DEFAULT 'unknown',
+                    related_event TEXT,
+                    reference_urls TEXT,
                     category_id INTEGER,
+                    privacy_level TEXT CHECK(privacy_level IN ('public', 'private')) DEFAULT 'public',
                     created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (persona_id) REFERENCES persona(id),
                     FOREIGN KEY (category_id) REFERENCES category(id)
                 )
             """)
@@ -168,10 +170,12 @@ class ProfileDatabase:
                 CREATE TABLE IF NOT EXISTS insight (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     content TEXT NOT NULL,
-                    trigger_event TEXT,
-                    impact_level TEXT DEFAULT 'medium' CHECK (impact_level IN ('high', 'medium', 'low')),
+                    source_people TEXT,
+                    keywords TEXT,
+                    source_app TEXT DEFAULT 'unknown',
                     category_id INTEGER,
-                    reference_urls TEXT,  -- JSON格式存储URL数组
+                    reference_urls TEXT,
+                    privacy_level TEXT CHECK(privacy_level IN ('public', 'private')) DEFAULT 'public',
                     created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (category_id) REFERENCES category(id)
@@ -183,11 +187,14 @@ class ProfileDatabase:
                 CREATE TABLE IF NOT EXISTS focus (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     content TEXT NOT NULL,
-                    priority INTEGER CHECK (priority BETWEEN 1 AND 10),
-                    status TEXT DEFAULT 'active' CHECK (status IN ('active', 'paused', 'completed')),
+                    priority INTEGER CHECK(priority >= 1 AND priority <= 10),
+                    status TEXT CHECK(status IN ('active', 'paused', 'completed')),
                     context TEXT,
+                    keywords TEXT,
+                    source_app TEXT DEFAULT 'unknown',
                     category_id INTEGER,
                     deadline DATE,
+                    privacy_level TEXT CHECK(privacy_level IN ('public', 'private')) DEFAULT 'public',
                     created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (category_id) REFERENCES category(id)
@@ -199,11 +206,13 @@ class ProfileDatabase:
                 CREATE TABLE IF NOT EXISTS goal (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     content TEXT NOT NULL,
-                    type TEXT NOT NULL CHECK (type IN ('long_term', 'short_term')),
+                    type TEXT CHECK(type IN ('long_term', 'short_term', 'plan', 'todo')),
                     deadline DATE,
-                    progress INTEGER DEFAULT 0 CHECK (progress BETWEEN 0 AND 100),
-                    status TEXT DEFAULT 'planning' CHECK (status IN ('planning', 'in_progress', 'completed', 'abandoned')),
+                    status TEXT CHECK(status IN ('planning', 'in_progress', 'completed', 'abandoned')),
+                    keywords TEXT,
+                    source_app TEXT DEFAULT 'unknown',
                     category_id INTEGER,
+                    privacy_level TEXT CHECK(privacy_level IN ('public', 'private')) DEFAULT 'public',
                     created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (category_id) REFERENCES category(id)
@@ -215,75 +224,70 @@ class ProfileDatabase:
                 CREATE TABLE IF NOT EXISTS preference (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     content TEXT NOT NULL,
-                    strength TEXT DEFAULT 'moderate' CHECK (strength IN ('strong', 'moderate', 'flexible')),
                     context TEXT,
+                    keywords TEXT,
+                    source_app TEXT DEFAULT 'unknown',
                     category_id INTEGER,
+                    privacy_level TEXT CHECK(privacy_level IN ('public', 'private')) DEFAULT 'public',
                     created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (category_id) REFERENCES category(id)
                 )
             """)
             
-            # 9. Decision（决策表）
-            self.cursor.execute("""
-                CREATE TABLE IF NOT EXISTS decision (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    content TEXT NOT NULL,
-                    reasoning TEXT,
-                    outcome TEXT,
-                    domain TEXT,
-                    category_id INTEGER,
-                    created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (category_id) REFERENCES category(id)
-                )
-            """)
-            
-            # 10. Methodology（方法论表）
+            # 9. Methodology（方法论表）
             self.cursor.execute("""
                 CREATE TABLE IF NOT EXISTS methodology (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     content TEXT NOT NULL,
                     type TEXT,
-                    effectiveness TEXT DEFAULT 'experimental' CHECK (effectiveness IN ('proven', 'experimental', 'theoretical')),
+                    effectiveness TEXT CHECK(effectiveness IN ('proven', 'experimental', 'theoretical')),
                     use_cases TEXT,
-                    persona_id INTEGER DEFAULT 1,
+                    keywords TEXT,
+                    source_app TEXT DEFAULT 'unknown',
+                    reference_urls TEXT,
                     category_id INTEGER,
-                    reference_urls TEXT,  -- JSON格式存储URL数组
-                    created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (persona_id) REFERENCES persona(id),
-                    FOREIGN KEY (category_id) REFERENCES category(id)
-                )
-            """)
-            
-            # 11. Experience（经验表）
-            self.cursor.execute("""
-                CREATE TABLE IF NOT EXISTS experience (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    content TEXT NOT NULL,
-                    field TEXT NOT NULL,
-                    expertise_level TEXT DEFAULT 'beginner' CHECK (expertise_level IN ('expert', 'proficient', 'intermediate', 'beginner')),
-                    years INTEGER DEFAULT 0,
-                    key_learnings TEXT,
-                    category_id INTEGER,
-                    reference_urls TEXT,  -- JSON格式存储URL数组
+                    privacy_level TEXT CHECK(privacy_level IN ('public', 'private')) DEFAULT 'public',
                     created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (category_id) REFERENCES category(id)
                 )
             """)
             
-            # 12. Prediction（预测表）
+            # 10. Prediction（预测表）
             self.cursor.execute("""
                 CREATE TABLE IF NOT EXISTS prediction (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     content TEXT NOT NULL,
                     timeframe TEXT,
                     basis TEXT,
-                    verification_status TEXT DEFAULT 'pending' CHECK (verification_status IN ('correct', 'incorrect', 'pending', 'partially_correct')),
-                    reference_urls TEXT,  -- JSON格式存储URL数组
+                    verification_status TEXT CHECK(verification_status IN ('pending', 'correct', 'incorrect', 'partial')),
+                    keywords TEXT,
+                    source_app TEXT DEFAULT 'unknown',
+                    reference_urls TEXT,
                     category_id INTEGER,
+                    privacy_level TEXT CHECK(privacy_level IN ('public', 'private')) DEFAULT 'public',
+                    created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (category_id) REFERENCES category(id)
+                )
+            """)
+            
+            # 11. Memory（记忆表）
+            self.cursor.execute("""
+                CREATE TABLE IF NOT EXISTS memory (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    content TEXT NOT NULL,
+                    memory_type TEXT CHECK(memory_type IN ('experience', 'event', 'learning', 'interaction', 'achievement', 'mistake')),
+                    importance INTEGER CHECK(importance >= 1 AND importance <= 10),
+                    related_people TEXT,
+                    location TEXT,
+                    memory_date DATE,
+                    keywords TEXT,
+                    source_app TEXT DEFAULT 'unknown',
+                    reference_urls TEXT,
+                    category_id INTEGER,
+                    privacy_level TEXT CHECK(privacy_level IN ('public', 'private')) DEFAULT 'public',
                     created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (category_id) REFERENCES category(id)
@@ -291,66 +295,81 @@ class ProfileDatabase:
             """)
             
             self.connection.commit()
+            
         except Exception as e:
             self.connection.rollback()
             raise
     
     def _create_indexes(self):
-        """创建数据库索引以提升查询性能"""
+        """创建索引（基于database 0.3.md）"""
         try:
-            # 为主要查询字段创建索引
-            indexes = [
-                # Category表索引
-                "CREATE INDEX IF NOT EXISTS idx_category_first_level ON category(first_level)",
-                "CREATE INDEX IF NOT EXISTS idx_category_second_level ON category(second_level)",
-                
-                # Relations表索引
-                "CREATE INDEX IF NOT EXISTS idx_relations_source ON relations(source_table, source_id)",
-                "CREATE INDEX IF NOT EXISTS idx_relations_target ON relations(target_table, target_id)",
-                "CREATE INDEX IF NOT EXISTS idx_relations_type ON relations(relation_type)",
-                
-                # Viewpoint表索引
-                "CREATE INDEX IF NOT EXISTS idx_viewpoint_subject ON viewpoint(subject)",
-                "CREATE INDEX IF NOT EXISTS idx_viewpoint_time_period ON viewpoint(time_period)",
-                "CREATE INDEX IF NOT EXISTS idx_viewpoint_category ON viewpoint(category_id)",
-                
-                # Insight表索引
-                "CREATE INDEX IF NOT EXISTS idx_insight_impact_level ON insight(impact_level)",
-                "CREATE INDEX IF NOT EXISTS idx_insight_category ON insight(category_id)",
-                
-                # Focus表索引
-                "CREATE INDEX IF NOT EXISTS idx_focus_status ON focus(status)",
-                "CREATE INDEX IF NOT EXISTS idx_focus_priority ON focus(priority)",
-                "CREATE INDEX IF NOT EXISTS idx_focus_deadline ON focus(deadline)",
-                
-                # Goal表索引
-                "CREATE INDEX IF NOT EXISTS idx_goal_type ON goal(type)",
-                "CREATE INDEX IF NOT EXISTS idx_goal_status ON goal(status)",
-                "CREATE INDEX IF NOT EXISTS idx_goal_deadline ON goal(deadline)",
-                
-                # Decision表索引
-                "CREATE INDEX IF NOT EXISTS idx_decision_domain ON decision(domain)",
-                
-                # Experience表索引
-                "CREATE INDEX IF NOT EXISTS idx_experience_field ON experience(field)",
-                "CREATE INDEX IF NOT EXISTS idx_experience_expertise ON experience(expertise_level)",
-                
-                # 通用时间索引
-                "CREATE INDEX IF NOT EXISTS idx_viewpoint_created_time ON viewpoint(created_time)",
-                "CREATE INDEX IF NOT EXISTS idx_insight_created_time ON insight(created_time)",
-                "CREATE INDEX IF NOT EXISTS idx_focus_created_time ON focus(created_time)",
-                "CREATE INDEX IF NOT EXISTS idx_goal_created_time ON goal(created_time)",
-                "CREATE INDEX IF NOT EXISTS idx_preference_created_time ON preference(created_time)",
-                "CREATE INDEX IF NOT EXISTS idx_decision_created_time ON decision(created_time)",
-                "CREATE INDEX IF NOT EXISTS idx_methodology_created_time ON methodology(created_time)",
-                "CREATE INDEX IF NOT EXISTS idx_experience_created_time ON experience(created_time)",
-                "CREATE INDEX IF NOT EXISTS idx_prediction_created_time ON prediction(created_time)"
-            ]
+            # Persona表索引
+            self.cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_persona_id ON persona(id)")
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_persona_privacy ON persona(privacy_level)")
             
-            for index_sql in indexes:
-                self.cursor.execute(index_sql)
+            # Category表索引
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_category_levels ON category(first_level, second_level)")
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_category_active ON category(is_active)")
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_category_privacy ON category(privacy_level)")
+            
+            # Relations表索引
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_relations_source ON relations(source_table, source_id)")
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_relations_target ON relations(target_table, target_id)")
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_relations_type ON relations(relation_type)")
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_relations_privacy ON relations(privacy_level)")
+            
+            # Viewpoint表索引
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_viewpoint_source_people ON viewpoint(source_people)")
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_viewpoint_source_app ON viewpoint(source_app)")
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_viewpoint_category ON viewpoint(category_id)")
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_viewpoint_privacy ON viewpoint(privacy_level)")
+            
+            # Insight表索引
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_insight_source_people ON insight(source_people)")
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_insight_source_app ON insight(source_app)")
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_insight_category ON insight(category_id)")
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_insight_time ON insight(created_time)")
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_insight_privacy ON insight(privacy_level)")
+            
+            # Focus表索引
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_focus_priority ON focus(priority)")
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_focus_status ON focus(status)")
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_focus_deadline ON focus(deadline)")
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_focus_category ON focus(category_id)")
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_focus_privacy ON focus(privacy_level)")
+            
+            # Goal表索引
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_goal_type ON goal(type)")
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_goal_status ON goal(status)")
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_goal_deadline ON goal(deadline)")
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_goal_category ON goal(category_id)")
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_goal_privacy ON goal(privacy_level)")
+            
+            # Preference表索引
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_preference_category ON preference(category_id)")
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_preference_privacy ON preference(privacy_level)")
+            
+            # Methodology表索引
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_methodology_type ON methodology(type)")
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_methodology_effectiveness ON methodology(effectiveness)")
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_methodology_category ON methodology(category_id)")
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_methodology_privacy ON methodology(privacy_level)")
+            
+            # Prediction表索引
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_prediction_timeframe ON prediction(timeframe)")
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_prediction_verification ON prediction(verification_status)")
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_prediction_category ON prediction(category_id)")
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_prediction_privacy ON prediction(privacy_level)")
+            
+            # Memory表索引
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_memory_type ON memory(memory_type)")
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_memory_importance ON memory(importance)")
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_memory_date ON memory(memory_date)")
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_memory_category ON memory(category_id)")
+            self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_memory_privacy ON memory(privacy_level)")
             
             self.connection.commit()
+            
         except Exception as e:
             self.connection.rollback()
             raise
@@ -358,74 +377,77 @@ class ProfileDatabase:
     def _init_default_data(self):
         """初始化默认数据"""
         try:
-            # 创建默认persona记录
-            self.cursor.execute("""
-                INSERT OR IGNORE INTO persona (id, name, gender, personality, bio)
-                VALUES (1, '用户', 'other', '待完善', '个人画像系统用户')
-            """)
+            # 检查是否已有persona记录
+            self.cursor.execute("SELECT COUNT(*) FROM persona")
+            count = self.cursor.fetchone()[0]
             
-            # 创建默认分类
+            if count == 0:
+                # 插入默认的persona记录（ID固定为1）
+                self.cursor.execute("""
+                    INSERT INTO persona (id, name, gender, personality, bio, privacy_level)
+                    VALUES (1, '用户', '未设置', '待完善', '个人画像待完善', 'private')
+                """)
+            
+            # 插入一些默认分类
             default_categories = [
                 ('技术', '编程开发', '软件开发相关技术'),
                 ('技术', '系统架构', '系统设计和架构'),
-                ('技术', '数据科学', '数据分析和机器学习'),
-                ('生活', '健康管理', '身体健康和运动'),
-                ('生活', '人际关系', '社交和人际交往'),
-                ('生活', '时间管理', '效率和时间规划'),
-                ('商业', '投资理财', '财务管理和投资'),
-                ('商业', '创业', '创业和商业机会'),
-                ('商业', '职业发展', '职业规划和发展'),
-                ('个人成长', '学习方法', '学习技巧和方法'),
-                ('个人成长', '思维模式', '思维方式和认知'),
-                ('个人成长', '目标管理', '目标设定和达成')
+                ('生活', '人际关系', '人际交往和关系管理'),
+                ('生活', '健康管理', '身体和心理健康'),
+                ('商业', '投资理财', '投资和财务管理'),
+                ('商业', '创业管理', '创业和企业管理'),
+                ('学习', '知识管理', '知识获取和管理'),
+                ('学习', '技能提升', '个人技能发展')
             ]
             
             for first_level, second_level, description in default_categories:
+                # 检查是否已存在
                 self.cursor.execute("""
-                    INSERT OR IGNORE INTO category (first_level, second_level, description)
-                    VALUES (?, ?, ?)
-                """, (first_level, second_level, description))
+                    SELECT COUNT(*) FROM category 
+                    WHERE first_level = ? AND second_level = ?
+                """, (first_level, second_level))
+                
+                if self.cursor.fetchone()[0] == 0:
+                    self.cursor.execute("""
+                        INSERT INTO category (first_level, second_level, description)
+                        VALUES (?, ?, ?)
+                    """, (first_level, second_level, description))
             
             self.connection.commit()
+            
         except Exception as e:
             self.connection.rollback()
             raise
     
-    # 通用CRUD操作
     def insert_record(self, table_name: str, **kwargs) -> int:
         """
-        插入新记录
+        插入记录到指定表
         
         Args:
             table_name: 表名
             **kwargs: 字段值
             
         Returns:
-            新插入记录的ID
+            插入记录的ID
         """
-        if table_name not in self.tables:
-            raise ValueError(f"无效的表名: {table_name}")
-        
         try:
+            if table_name not in self.tables:
+                raise ValueError(f"未知的表名: {table_name}")
+            
             # 处理JSON字段
-            json_fields = ['reference_urls']
-            for field in json_fields:
-                if field in kwargs and isinstance(kwargs[field], list):
-                    kwargs[field] = json.dumps(kwargs[field], ensure_ascii=False)
+            if 'keywords' in kwargs and isinstance(kwargs['keywords'], list):
+                kwargs['keywords'] = json.dumps(kwargs['keywords'], ensure_ascii=False)
+            if 'reference_urls' in kwargs and isinstance(kwargs['reference_urls'], list):
+                kwargs['reference_urls'] = json.dumps(kwargs['reference_urls'], ensure_ascii=False)
             
-            # 添加时间戳
-            current_time = datetime.now().isoformat()
-            kwargs['created_time'] = current_time
-            kwargs['updated_time'] = current_time
-            
-            # 构建SQL
+            # 构建SQL语句
             fields = list(kwargs.keys())
             placeholders = ['?' for _ in fields]
             values = list(kwargs.values())
             
             sql = f"""
-            INSERT INTO {table_name} ({', '.join(fields)})
-            VALUES ({', '.join(placeholders)})
+                INSERT INTO {table_name} ({', '.join(fields)})
+                VALUES ({', '.join(placeholders)})
             """
             
             self.cursor.execute(sql, values)
@@ -439,7 +461,7 @@ class ProfileDatabase:
     
     def update_record(self, table_name: str, record_id: int, **kwargs) -> bool:
         """
-        更新记录
+        更新指定记录
         
         Args:
             table_name: 表名
@@ -449,44 +471,44 @@ class ProfileDatabase:
         Returns:
             是否更新成功
         """
-        if table_name not in self.tables:
-            raise ValueError(f"无效的表名: {table_name}")
-        
         try:
+            if table_name not in self.tables:
+                raise ValueError(f"未知的表名: {table_name}")
+            
             if not kwargs:
-                return False
+                return True
             
             # 处理JSON字段
-            json_fields = ['reference_urls']
-            for field in json_fields:
-                if field in kwargs and isinstance(kwargs[field], list):
-                    kwargs[field] = json.dumps(kwargs[field], ensure_ascii=False)
+            if 'keywords' in kwargs and isinstance(kwargs['keywords'], list):
+                kwargs['keywords'] = json.dumps(kwargs['keywords'], ensure_ascii=False)
+            if 'reference_urls' in kwargs and isinstance(kwargs['reference_urls'], list):
+                kwargs['reference_urls'] = json.dumps(kwargs['reference_urls'], ensure_ascii=False)
             
             # 添加更新时间
             kwargs['updated_time'] = datetime.now().isoformat()
             
-            # 构建SQL
+            # 构建SQL语句
             set_clauses = [f"{field} = ?" for field in kwargs.keys()]
             values = list(kwargs.values()) + [record_id]
             
             sql = f"""
-            UPDATE {table_name} 
-            SET {', '.join(set_clauses)}
-            WHERE id = ?
+                UPDATE {table_name}
+                SET {', '.join(set_clauses)}
+                WHERE id = ?
             """
             
             self.cursor.execute(sql, values)
             self.connection.commit()
             
             return self.cursor.rowcount > 0
-                
+            
         except Exception as e:
             self.connection.rollback()
             raise
     
     def delete_record(self, table_name: str, record_id: int) -> bool:
         """
-        删除记录
+        删除指定记录
         
         Args:
             table_name: 表名
@@ -495,205 +517,183 @@ class ProfileDatabase:
         Returns:
             是否删除成功
         """
-        if table_name not in self.tables:
-            raise ValueError(f"无效的表名: {table_name}")
-        
         try:
-            sql = f"DELETE FROM {table_name} WHERE id = ?"
-            self.cursor.execute(sql, (record_id,))
+            if table_name not in self.tables:
+                raise ValueError(f"未知的表名: {table_name}")
+            
+            self.cursor.execute(f"DELETE FROM {table_name} WHERE id = ?", (record_id,))
             self.connection.commit()
             
             return self.cursor.rowcount > 0
-                
+            
         except Exception as e:
             self.connection.rollback()
             raise
     
     def get_record(self, table_name: str, record_id: int) -> Optional[Dict[str, Any]]:
         """
-        获取单条记录
+        获取指定记录
         
         Args:
             table_name: 表名
             record_id: 记录ID
             
         Returns:
-            记录字典或None
+            记录数据字典，如果不存在返回None
         """
-        if table_name not in self.tables:
-            raise ValueError(f"无效的表名: {table_name}")
-        
         try:
-            sql = f"SELECT * FROM {table_name} WHERE id = ?"
-            self.cursor.execute(sql, (record_id,))
+            if table_name not in self.tables:
+                raise ValueError(f"未知的表名: {table_name}")
+            
+            self.cursor.execute(f"SELECT * FROM {table_name} WHERE id = ?", (record_id,))
             row = self.cursor.fetchone()
             
             if row:
-                record = dict(row)
-                # 解析JSON格式的字段
-                json_fields = ['reference_urls']
-                for field in json_fields:
-                    if field in record and record[field]:
-                        try:
-                            record[field] = json.loads(record[field])
-                        except (json.JSONDecodeError, TypeError):
-                            record[field] = []
-                    elif field in record:
-                        record[field] = []
-                return record
-            else:
-                return None
-                
-        except Exception as e:
-            raise
-    
-    def search_records(self, table_name: str, **kwargs) -> List[Dict[str, Any]]:
-        """
-        搜索记录
-        
-        Args:
-            table_name: 表名
-            **kwargs: 搜索条件，支持：
-                - keyword: 内容关键词
-                - category_id: 分类ID
-                - status: 状态
-                - type: 类型
-                - limit: 返回记录数限制
-                - offset: 偏移量
-                - order_by: 排序字段
-                - order_desc: 是否降序
+                result = dict(row)
+                # 解析JSON字段
+                if 'keywords' in result and result['keywords']:
+                    try:
+                        result['keywords'] = json.loads(result['keywords'])
+                    except:
+                        result['keywords'] = []
+                if 'reference_urls' in result and result['reference_urls']:
+                    try:
+                        result['reference_urls'] = json.loads(result['reference_urls'])
+                    except:
+                        result['reference_urls'] = []
+                return result
             
-        Returns:
-            记录列表
-        """
-        if table_name not in self.tables:
-            raise ValueError(f"无效的表名: {table_name}")
-        
-        try:
-            conditions = []
-            params = []
-            
-            # 提取特殊参数
-            limit = kwargs.pop('limit', 100)
-            offset = kwargs.pop('offset', 0)
-            order_by = kwargs.pop('order_by', 'created_time')
-            order_desc = kwargs.pop('order_desc', True)
-            keyword = kwargs.pop('keyword', None)
-            
-            # 关键词搜索
-            if keyword:
-                conditions.append("content LIKE ?")
-                params.append(f"%{keyword}%")
-            
-            # 其他条件
-            for field, value in kwargs.items():
-                if value is not None:
-                    conditions.append(f"{field} = ?")
-                    params.append(value)
-            
-            # 构建WHERE子句
-            where_clause = ""
-            if conditions:
-                where_clause = "WHERE " + " AND ".join(conditions)
-            
-            # 构建ORDER BY子句
-            order_direction = "DESC" if order_desc else "ASC"
-            order_clause = f"ORDER BY {order_by} {order_direction}"
-            
-            sql = f"""
-            SELECT * FROM {table_name} 
-            {where_clause}
-            {order_clause}
-            LIMIT ? OFFSET ?
-            """
-            
-            params.extend([limit, offset])
-            self.cursor.execute(sql, params)
-            rows = self.cursor.fetchall()
-            
-            records = []
-            for row in rows:
-                record = dict(row)
-                # 解析JSON格式的字段
-                json_fields = ['reference_urls']
-                for field in json_fields:
-                    if field in record and record[field]:
-                        try:
-                            record[field] = json.loads(record[field])
-                        except (json.JSONDecodeError, TypeError):
-                            record[field] = []
-                    elif field in record:
-                        record[field] = []
-                records.append(record)
-            
-            return records
+            return None
             
         except Exception as e:
             raise
     
-    def get_all_records(self, table_name: str, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
+    def query_records(self, table_name: str, filter_conditions: Dict[str, Any] = None, 
+                     sort_by: str = 'created_time', sort_order: str = 'desc', 
+                     limit: int = 20, offset: int = 0) -> Tuple[List[Dict[str, Any]], int]:
         """
-        获取表中所有记录
+        查询记录（支持复杂筛选条件）
         
         Args:
             table_name: 表名
+            filter_conditions: 筛选条件字典
+            sort_by: 排序字段
+            sort_order: 排序顺序 ('asc' 或 'desc')
             limit: 返回记录数限制
             offset: 偏移量
             
         Returns:
-            记录列表
-        """
-        return self.search_records(table_name, limit=limit, offset=offset)
-    
-    def get_table_stats(self, table_name: str = None) -> Dict[str, Any]:
-        """
-        获取表统计信息
-        
-        Args:
-            table_name: 表名（可选，不提供则获取所有表的统计信息）
-            
-        Returns:
-            统计信息字典
+            (记录列表, 总记录数) 元组
         """
         try:
-            if table_name:
-                # 获取单个表的统计信息
-                if table_name not in self.tables:
-                    raise ValueError(f"无效的表名: {table_name}")
-                
-                # 获取记录总数
-                self.cursor.execute(f"SELECT COUNT(*) as total FROM {table_name}")
-                total = self.cursor.fetchone()['total']
-                
-                # 获取最新记录时间
-                self.cursor.execute(f"SELECT MAX(created_time) as latest FROM {table_name}")
-                latest = self.cursor.fetchone()['latest']
-                
-                # 获取最早记录时间
-                self.cursor.execute(f"SELECT MIN(created_time) as earliest FROM {table_name}")
-                earliest = self.cursor.fetchone()['earliest']
-                
-                return {
-                    'table_name': table_name,
-                    'total_records': total,
-                    'latest_record_time': latest,
-                    'earliest_record_time': earliest
-                }
-            else:
-                # 获取所有表的统计信息
-                all_stats = {}
-                for table in self.tables.keys():
-                    stats = self.get_table_stats(table)
-                    all_stats[table] = stats
-                
-                return all_stats
-                
+            if table_name not in self.tables:
+                raise ValueError(f"未知的表名: {table_name}")
+            
+            # 构建WHERE子句
+            where_clauses = []
+            params = []
+            
+            if filter_conditions:
+                for key, value in filter_conditions.items():
+                    if value is None:
+                        continue
+                        
+                    if key == 'ids':
+                        # ID列表筛选
+                        placeholders = ','.join(['?' for _ in value])
+                        where_clauses.append(f"id IN ({placeholders})")
+                        params.extend(value)
+                    elif key.endswith('_contains'):
+                        # 包含文本筛选
+                        field = key.replace('_contains', '')
+                        where_clauses.append(f"{field} LIKE ?")
+                        params.append(f"%{value}%")
+                    elif key.endswith('_in'):
+                        # 列表筛选
+                        field = key.replace('_in', '')
+                        placeholders = ','.join(['?' for _ in value])
+                        where_clauses.append(f"{field} IN ({placeholders})")
+                        params.extend(value)
+                    elif key.endswith('_is'):
+                        # 精确匹配
+                        field = key.replace('_is', '')
+                        where_clauses.append(f"{field} = ?")
+                        params.append(value)
+                    elif key.endswith('_gte'):
+                        # 大于等于
+                        field = key.replace('_gte', '')
+                        where_clauses.append(f"{field} >= ?")
+                        params.append(value)
+                    elif key.endswith('_lte'):
+                        # 小于等于
+                        field = key.replace('_lte', '')
+                        where_clauses.append(f"{field} <= ?")
+                        params.append(value)
+                    elif key.endswith('_from'):
+                        # 日期范围起始
+                        field = key.replace('_from', '')
+                        where_clauses.append(f"{field} >= ?")
+                        params.append(value)
+                    elif key.endswith('_to'):
+                        # 日期范围结束
+                        field = key.replace('_to', '')
+                        where_clauses.append(f"{field} <= ?")
+                        params.append(value)
+                    elif key == 'keywords_contain_any':
+                        # 关键词包含任意一个
+                        keyword_conditions = []
+                        for keyword in value:
+                            keyword_conditions.append("keywords LIKE ?")
+                            params.append(f'%"{keyword}"%')
+                        where_clauses.append(f"({' OR '.join(keyword_conditions)})")
+                    elif key == 'keywords_contain_all':
+                        # 关键词包含所有
+                        for keyword in value:
+                            where_clauses.append("keywords LIKE ?")
+                            params.append(f'%"{keyword}"%')
+            
+            # 构建完整SQL
+            where_sql = ""
+            if where_clauses:
+                where_sql = f"WHERE {' AND '.join(where_clauses)}"
+            
+            # 获取总记录数
+            count_sql = f"SELECT COUNT(*) FROM {table_name} {where_sql}"
+            self.cursor.execute(count_sql, params)
+            total_count = self.cursor.fetchone()[0]
+            
+            # 获取记录
+            order_sql = f"ORDER BY {sort_by} {sort_order.upper()}"
+            limit_sql = f"LIMIT {limit} OFFSET {offset}"
+            
+            query_sql = f"SELECT * FROM {table_name} {where_sql} {order_sql} {limit_sql}"
+            self.cursor.execute(query_sql, params)
+            
+            rows = self.cursor.fetchall()
+            records = []
+            
+            for row in rows:
+                record = dict(row)
+                # 解析JSON字段
+                if 'keywords' in record and record['keywords']:
+                    try:
+                        record['keywords'] = json.loads(record['keywords'])
+                    except:
+                        record['keywords'] = []
+                if 'reference_urls' in record and record['reference_urls']:
+                    try:
+                        record['reference_urls'] = json.loads(record['reference_urls'])
+                    except:
+                        record['reference_urls'] = []
+                records.append(record)
+            
+            return records, total_count
+            
         except Exception as e:
             raise
     
-    # 特殊查询方法
     def get_persona(self) -> Optional[Dict[str, Any]]:
-        """获取用户画像"""
+        """获取用户画像（ID固定为1）"""
         return self.get_record('persona', 1)
     
     def update_persona(self, **kwargs) -> bool:
@@ -702,35 +702,51 @@ class ProfileDatabase:
     
     def get_categories(self, first_level: str = None) -> List[Dict[str, Any]]:
         """获取分类列表"""
-        if first_level:
-            return self.search_records('category', first_level=first_level, is_active=1)
-        else:
-            return self.search_records('category', is_active=1)
+        try:
+            if first_level:
+                self.cursor.execute("SELECT * FROM category WHERE first_level = ? AND is_active = 1", (first_level,))
+            else:
+                self.cursor.execute("SELECT * FROM category WHERE is_active = 1")
+            
+            return [dict(row) for row in self.cursor.fetchall()]
+        except Exception as e:
+            raise
     
     def add_relation(self, source_table: str, source_id: int, target_table: str, 
                     target_id: int, relation_type: str, strength: str = 'medium', 
                     note: str = None) -> int:
         """添加关联关系"""
-        return self.insert_record('relations',
-                                source_table=source_table,
-                                source_id=source_id,
-                                target_table=target_table,
-                                target_id=target_id,
-                                relation_type=relation_type,
-                                strength=strength,
-                                note=note)
+        try:
+            return self.insert_record('relations',
+                                    source_table=source_table,
+                                    source_id=source_id,
+                                    target_table=target_table,
+                                    target_id=target_id,
+                                    relation_type=relation_type,
+                                    strength=strength,
+                                    note=note)
+        except Exception as e:
+            raise
     
     def get_relations(self, table_name: str, record_id: int, 
                      relation_type: str = None) -> List[Dict[str, Any]]:
-        """获取记录的关联关系"""
-        conditions = {
-            'source_table': table_name,
-            'source_id': record_id
-        }
-        if relation_type:
-            conditions['relation_type'] = relation_type
-        
-        return self.search_records('relations', **conditions)
+        """获取关联关系"""
+        try:
+            if relation_type:
+                self.cursor.execute("""
+                    SELECT * FROM relations 
+                    WHERE (source_table = ? AND source_id = ?) OR (target_table = ? AND target_id = ?)
+                    AND relation_type = ?
+                """, (table_name, record_id, table_name, record_id, relation_type))
+            else:
+                self.cursor.execute("""
+                    SELECT * FROM relations 
+                    WHERE (source_table = ? AND source_id = ?) OR (target_table = ? AND target_id = ?)
+                """, (table_name, record_id, table_name, record_id))
+            
+            return [dict(row) for row in self.cursor.fetchall()]
+        except Exception as e:
+            raise
     
     def execute_custom_sql(self, sql: str, params: List[Any] = None, fetch_results: bool = True) -> Dict[str, Any]:
         """
@@ -738,87 +754,58 @@ class ProfileDatabase:
         
         Args:
             sql: SQL语句
-            params: SQL参数列表
-            fetch_results: 是否获取查询结果（对于SELECT语句）
+            params: 参数列表
+            fetch_results: 是否获取结果
             
         Returns:
             执行结果字典
         """
-        if not sql or not sql.strip():
-            return {
-                "success": False,
-                "message": "SQL语句不能为空",
-                "results": None,
-                "affected_rows": 0,
-                "last_insert_id": None
-            }
-        
-        # 安全检查：禁止某些危险操作
-        sql_upper = sql.strip().upper()
-        dangerous_keywords = ['DROP', 'TRUNCATE', 'ALTER TABLE', 'CREATE TABLE', 'CREATE INDEX']
-        
-        for keyword in dangerous_keywords:
-            if keyword in sql_upper:
-                return {
-                    "success": False,
-                    "message": f"出于安全考虑，禁止执行包含 '{keyword}' 的SQL语句",
-                    "results": None,
-                    "affected_rows": 0,
-                    "last_insert_id": None
-                }
-        
         try:
-            # 执行SQL语句
-            if params:
-                self.cursor.execute(sql, params)
-            else:
-                self.cursor.execute(sql)
+            if params is None:
+                params = []
+            
+            # 安全检查：只允许SELECT、INSERT、UPDATE、DELETE语句
+            sql_upper = sql.strip().upper()
+            allowed_operations = ['SELECT', 'INSERT', 'UPDATE', 'DELETE']
+            
+            if not any(sql_upper.startswith(op) for op in allowed_operations):
+                raise ValueError("只允许执行SELECT、INSERT、UPDATE、DELETE语句")
+            
+            # 禁止某些危险操作
+            dangerous_keywords = ['DROP', 'ALTER', 'CREATE', 'TRUNCATE', 'REPLACE']
+            if any(keyword in sql_upper for keyword in dangerous_keywords):
+                raise ValueError("禁止执行可能危险的SQL操作")
+            
+            self.cursor.execute(sql, params)
             
             result = {
                 "success": True,
-                "message": "SQL语句执行成功",
-                "results": None,
-                "affected_rows": self.cursor.rowcount,
-                "last_insert_id": None
+                "rowcount": self.cursor.rowcount,
+                "lastrowid": self.cursor.lastrowid,
+                "data": None
             }
             
-            # 如果是查询语句且需要获取结果
             if fetch_results and sql_upper.startswith('SELECT'):
                 rows = self.cursor.fetchall()
-                results = []
-                for row in rows:
-                    record = dict(row)
-                    # 尝试解析可能的JSON字段
-                    json_fields = ['reference_urls']
-                    for field in json_fields:
-                        if field in record and record[field]:
-                            try:
-                                record[field] = json.loads(record[field])
-                            except (json.JSONDecodeError, TypeError):
-                                pass  # 保持原值
-                    results.append(record)
-                result["results"] = results
-                result["message"] = f"查询成功，返回 {len(results)} 条记录"
+                result["data"] = [dict(row) for row in rows]
+                result["count"] = len(result["data"])
             
-            # 如果是插入语句，获取最后插入的ID
-            if sql_upper.startswith('INSERT'):
-                result["last_insert_id"] = self.cursor.lastrowid
-                result["message"] = f"插入成功，新记录ID: {result['last_insert_id']}"
-            
-            # 提交事务
-            self.connection.commit()
+            # 如果是修改操作，提交事务
+            if sql_upper.startswith(('INSERT', 'UPDATE', 'DELETE')):
+                self.connection.commit()
             
             return result
             
         except Exception as e:
-            # 回滚事务
-            self.connection.rollback()
+            if sql.strip().upper().startswith(('INSERT', 'UPDATE', 'DELETE')):
+                self.connection.rollback()
+            
             return {
                 "success": False,
-                "message": f"SQL执行失败: {str(e)}",
-                "results": None,
-                "affected_rows": 0,
-                "last_insert_id": None
+                "error": str(e),
+                "rowcount": 0,
+                "lastrowid": None,
+                "data": None
             }
     
     def get_table_schema(self, table_name: str = None) -> Dict[str, Any]:
@@ -826,7 +813,7 @@ class ProfileDatabase:
         获取表结构信息
         
         Args:
-            table_name: 表名（可选，不提供则获取所有表的结构）
+            table_name: 表名，如果为None则返回所有表的结构
             
         Returns:
             表结构信息字典
@@ -834,62 +821,61 @@ class ProfileDatabase:
         try:
             if table_name:
                 if table_name not in self.tables:
-                    return {
-                        "success": False,
-                        "message": f"无效的表名: {table_name}",
-                        "schema": None
-                    }
+                    raise ValueError(f"未知的表名: {table_name}")
                 
-                # 获取单个表的结构
+                # 获取指定表的结构
                 self.cursor.execute(f"PRAGMA table_info({table_name})")
                 columns = self.cursor.fetchall()
                 
-                schema_info = {
+                return {
                     "table_name": table_name,
                     "description": self.tables[table_name],
-                    "columns": [dict(col) for col in columns]
-                }
-                
-                return {
-                    "success": True,
-                    "message": f"成功获取表 {table_name} 的结构信息",
-                    "schema": schema_info
+                    "columns": [
+                        {
+                            "name": col[1],
+                            "type": col[2],
+                            "not_null": bool(col[3]),
+                            "default_value": col[4],
+                            "primary_key": bool(col[5])
+                        }
+                        for col in columns
+                    ]
                 }
             else:
                 # 获取所有表的结构
-                all_schemas = {}
-                for table in self.tables.keys():
-                    self.cursor.execute(f"PRAGMA table_info({table})")
+                schemas = {}
+                for table_name, description in self.tables.items():
+                    self.cursor.execute(f"PRAGMA table_info({table_name})")
                     columns = self.cursor.fetchall()
                     
-                    all_schemas[table] = {
-                        "table_name": table,
-                        "description": self.tables[table],
-                        "columns": [dict(col) for col in columns]
+                    schemas[table_name] = {
+                        "description": description,
+                        "columns": [
+                            {
+                                "name": col[1],
+                                "type": col[2],
+                                "not_null": bool(col[3]),
+                                "default_value": col[4],
+                                "primary_key": bool(col[5])
+                            }
+                            for col in columns
+                        ]
                     }
                 
                 return {
-                    "success": True,
-                    "message": "成功获取所有表的结构信息",
-                    "schema": all_schemas
+                    "all_tables": schemas,
+                    "table_count": len(schemas)
                 }
                 
         except Exception as e:
-            return {
-                "success": False,
-                "message": f"获取表结构失败: {str(e)}",
-                "schema": None
-            }
+            raise
     
     def close(self):
         """关闭数据库连接"""
-        try:
-            if self.cursor:
-                self.cursor.close()
-            if self.connection:
-                self.connection.close()
-        except Exception as e:
-            pass
+        if self.cursor:
+            self.cursor.close()
+        if self.connection:
+            self.connection.close()
     
     def __enter__(self):
         """上下文管理器入口"""
@@ -899,20 +885,12 @@ class ProfileDatabase:
         """上下文管理器出口"""
         self.close()
 
-
-# 创建全局数据库实例
-db_instance = None
+# 全局数据库实例
+_database_instance = None
 
 def get_database() -> ProfileDatabase:
     """获取数据库实例（单例模式）"""
-    global db_instance
-    if db_instance is None:
-        # 获取当前文件（database.py）的目录
-        current_dir = Path(__file__).parent
-        # 获取项目根目录（main.py所在目录）
-        project_root = current_dir.parent
-        # 构建数据库文件的绝对路径
-        db_path = project_root / "profile_data.db"
-        
-        db_instance = ProfileDatabase(str(db_path))
-    return db_instance
+    global _database_instance
+    if _database_instance is None:
+        _database_instance = ProfileDatabase()
+    return _database_instance
