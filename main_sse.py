@@ -1,6 +1,6 @@
 """
 个人画像数据管理系统 - FastMCP SSE模式
-使用 FastMCP 的 @mcp.tool() 装饰器，参数直接在函数签名中定义
+使用 MCP 1.9.1 的 FastMCP 类，参数直接在函数签名中定义
 """
 
 from mcp.server.fastmcp import FastMCP
@@ -9,6 +9,8 @@ import json
 import os
 from pathlib import Path
 from datetime import datetime
+import functools
+import asyncio
 
 # 导入工具模块
 from tools import (
@@ -19,6 +21,32 @@ from tools import (
 
 # 创建FastMCP服务器实例
 mcp = FastMCP("个人画像数据管理系统")
+
+# 全局初始化状态
+class InitializationState:
+    complete = False
+
+init_state = InitializationState()
+
+def ensure_initialized(func):
+    """确保系统已完全初始化的装饰器"""
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        if not init_state.complete:
+            return {
+                "operation": "error",
+                "timestamp": datetime.now().isoformat(),
+                "error": "系统正在初始化中，请稍后再试"
+            }
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            return {
+                "operation": "error",
+                "timestamp": datetime.now().isoformat(),
+                "error": f"操作执行失败: {str(e)}"
+            }
+    return wrapper
 
 # 初始化工具实例
 persona_tools = PersonaTools()
@@ -35,11 +63,13 @@ database_tools = DatabaseTools()
 # ============ 人物档案相关操作 ============
 
 @mcp.tool()
+@ensure_initialized
 def get_persona() -> Dict[str, Any]:
     """获取当前用户的核心画像信息。该信息用于AI进行个性化交互。系统中只有一个用户画像，ID固定为1。"""
     return persona_tools.get_persona()
 
 @mcp.tool()
+@ensure_initialized
 def save_persona(name: str = None, gender: str = None, personality: str = None, 
                 avatar_url: str = None, bio: str = None, privacy_level: str = None) -> Dict[str, Any]:
     """保存（更新）当前用户的核心画像信息。由于ID固定为1，此操作主要用于更新现有画像。只需提供需要修改的字段。"""
@@ -168,6 +198,7 @@ def manage_preferences(action: str, id: int = None, content: str = None, context
 # ============ 方法论工具 ============
 
 @mcp.tool()
+@ensure_initialized
 def manage_methodologies(action: str, id: int = None, content: str = None, type: str = None,
                         effectiveness: str = 'experimental', use_cases: str = None,
                         keywords: List[str] = None, source_app: str = 'unknown',
@@ -246,8 +277,34 @@ def get_table_schema(table_name: str = None) -> Dict[str, Any]:
 
 if __name__ == "__main__":
     print("启动个人画像数据管理系统 - FastMCP SSE模式")
-    print("服务器地址: http://localhost:8000")
-    print("SSE端点: http://localhost:8000/sse")
     
-    # 使用 FastMCP 的 SSE 传输（默认端口8000）
-    mcp.run(transport="sse") 
+    try:
+        # 确保所有工具实例都已正确初始化
+        print("正在初始化工具实例...")
+        
+        # 验证数据库连接
+        try:
+            database_tools.get_table_schema()
+            print("数据库连接正常")
+        except Exception as e:
+            print(f"数据库连接失败: {e}")
+            
+        # 标记初始化完成
+        init_state.complete = True
+        print("所有工具初始化完成")
+        
+        # 添加短暂延迟确保初始化完全完成
+        import time
+        time.sleep(1)
+        
+        # 使用 MCP 1.9.1 的 SSE 传输
+        print("启动SSE服务器...")
+        # 使用MCP 1.9.1的正确启动方式
+        mcp.run(transport="sse")
+        
+    except KeyboardInterrupt:
+        print("\n服务器已停止")
+    except Exception as e:
+        print(f"服务器启动失败: {e}")
+        import traceback
+        traceback.print_exc() 
