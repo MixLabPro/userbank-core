@@ -7,7 +7,7 @@ Database Management Module
 
 import sqlite3
 import json
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Any, Optional, Tuple, Union
 from pathlib import Path
 import os
@@ -15,12 +15,13 @@ import os
 class ProfileDatabase:
     """个人画像数据库管理类"""
     
-    def __init__(self, db_path: str = None):
+    def __init__(self, db_path: str = None, timezone_offset: int = 8):
         """
         初始化数据库连接
         
         Args:
             db_path: 数据库文件路径，如果为None则使用main.py同目录下的profile_data.db
+            timezone_offset: 时区偏移量（小时），默认为8（北京时间UTC+8）
         """
         if db_path is None:
             # 获取当前文件所在目录的上级目录（即main.py所在目录）
@@ -30,6 +31,10 @@ class ProfileDatabase:
             self.db_path = db_path
         self.connection = None
         self.cursor = None
+        
+        # 设置时区
+        self.timezone = timezone(timedelta(hours=timezone_offset))
+        self.timezone_offset = timezone_offset
         
         # 定义所有表名和中文描述
         self.tables = {
@@ -63,6 +68,10 @@ class ProfileDatabase:
             
         except Exception as e:
             raise
+    
+    def _get_local_time(self) -> str:
+        """获取本地时间字符串"""
+        return datetime.now(self.timezone).isoformat()
     
     def _connect(self):
         """建立数据库连接"""
@@ -110,8 +119,8 @@ class ProfileDatabase:
                     avatar_url TEXT,
                     bio TEXT,
                     privacy_level TEXT CHECK(privacy_level IN ('public', 'private')) DEFAULT 'public',
-                    created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    created_time TIMESTAMP,
+                    updated_time TIMESTAMP
                 )
             """)
             
@@ -124,8 +133,8 @@ class ProfileDatabase:
                     description TEXT,
                     is_active BOOLEAN DEFAULT true,
                     privacy_level TEXT CHECK(privacy_level IN ('public', 'private')) DEFAULT 'public',
-                    created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    created_time TIMESTAMP,
+                    updated_time TIMESTAMP
                 )
             """)
             
@@ -141,8 +150,8 @@ class ProfileDatabase:
                     strength TEXT CHECK(strength IN ('strong', 'medium', 'weak')),
                     note TEXT,
                     privacy_level TEXT CHECK(privacy_level IN ('public', 'private')) DEFAULT 'public',
-                    created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    created_time TIMESTAMP,
+                    updated_time TIMESTAMP
                 )
             """)
             
@@ -158,8 +167,8 @@ class ProfileDatabase:
                     reference_urls TEXT,
                     category_id INTEGER,
                     privacy_level TEXT CHECK(privacy_level IN ('public', 'private')) DEFAULT 'public',
-                    created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    created_time TIMESTAMP,
+                    updated_time TIMESTAMP,
                     FOREIGN KEY (category_id) REFERENCES category(id)
                 )
             """)
@@ -175,8 +184,8 @@ class ProfileDatabase:
                     category_id INTEGER,
                     reference_urls TEXT,
                     privacy_level TEXT CHECK(privacy_level IN ('public', 'private')) DEFAULT 'public',
-                    created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    created_time TIMESTAMP,
+                    updated_time TIMESTAMP,
                     FOREIGN KEY (category_id) REFERENCES category(id)
                 )
             """)
@@ -194,8 +203,8 @@ class ProfileDatabase:
                     category_id INTEGER,
                     deadline DATE,
                     privacy_level TEXT CHECK(privacy_level IN ('public', 'private')) DEFAULT 'public',
-                    created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    created_time TIMESTAMP,
+                    updated_time TIMESTAMP,
                     FOREIGN KEY (category_id) REFERENCES category(id)
                 )
             """)
@@ -212,8 +221,8 @@ class ProfileDatabase:
                     source_app TEXT DEFAULT 'unknown',
                     category_id INTEGER,
                     privacy_level TEXT CHECK(privacy_level IN ('public', 'private')) DEFAULT 'public',
-                    created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    created_time TIMESTAMP,
+                    updated_time TIMESTAMP,
                     FOREIGN KEY (category_id) REFERENCES category(id)
                 )
             """)
@@ -228,8 +237,8 @@ class ProfileDatabase:
                     source_app TEXT DEFAULT 'unknown',
                     category_id INTEGER,
                     privacy_level TEXT CHECK(privacy_level IN ('public', 'private')) DEFAULT 'public',
-                    created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    created_time TIMESTAMP,
+                    updated_time TIMESTAMP,
                     FOREIGN KEY (category_id) REFERENCES category(id)
                 )
             """)
@@ -247,8 +256,8 @@ class ProfileDatabase:
                     reference_urls TEXT,
                     category_id INTEGER,
                     privacy_level TEXT CHECK(privacy_level IN ('public', 'private')) DEFAULT 'public',
-                    created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    created_time TIMESTAMP,
+                    updated_time TIMESTAMP,
                     FOREIGN KEY (category_id) REFERENCES category(id)
                 )
             """)
@@ -266,8 +275,8 @@ class ProfileDatabase:
                     reference_urls TEXT,
                     category_id INTEGER,
                     privacy_level TEXT CHECK(privacy_level IN ('public', 'private')) DEFAULT 'public',
-                    created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    created_time TIMESTAMP,
+                    updated_time TIMESTAMP,
                     FOREIGN KEY (category_id) REFERENCES category(id)
                 )
             """)
@@ -287,8 +296,8 @@ class ProfileDatabase:
                     reference_urls TEXT,
                     category_id INTEGER,
                     privacy_level TEXT CHECK(privacy_level IN ('public', 'private')) DEFAULT 'public',
-                    created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    created_time TIMESTAMP,
+                    updated_time TIMESTAMP,
                     FOREIGN KEY (category_id) REFERENCES category(id)
                 )
             """)
@@ -382,10 +391,11 @@ class ProfileDatabase:
             
             if count == 0:
                 # 插入默认的persona记录（ID固定为1）
+                current_time = self._get_local_time()
                 self.cursor.execute("""
-                    INSERT INTO persona (id, name, gender, personality, bio, privacy_level)
-                    VALUES (1, '用户', '未设置', '待完善', '个人画像待完善', 'private')
-                """)
+                    INSERT INTO persona (id, name, gender, personality, bio, privacy_level, created_time, updated_time)
+                    VALUES (1, '用户', '未设置', '待完善', '个人画像待完善', 'private', ?, ?)
+                """, (current_time, current_time))
             
             # 插入一些默认分类
             default_categories = [
@@ -407,10 +417,11 @@ class ProfileDatabase:
                 """, (first_level, second_level))
                 
                 if self.cursor.fetchone()[0] == 0:
+                    current_time = self._get_local_time()
                     self.cursor.execute("""
-                        INSERT INTO category (first_level, second_level, description)
-                        VALUES (?, ?, ?)
-                    """, (first_level, second_level, description))
+                        INSERT INTO category (first_level, second_level, description, created_time, updated_time)
+                        VALUES (?, ?, ?, ?, ?)
+                    """, (first_level, second_level, description, current_time, current_time))
             
             self.connection.commit()
             
@@ -438,6 +449,13 @@ class ProfileDatabase:
                 kwargs['keywords'] = json.dumps(kwargs['keywords'], ensure_ascii=False)
             if 'reference_urls' in kwargs and isinstance(kwargs['reference_urls'], list):
                 kwargs['reference_urls'] = json.dumps(kwargs['reference_urls'], ensure_ascii=False)
+            
+            # 自动添加创建时间和更新时间（使用本地时区）
+            current_time = self._get_local_time()
+            if 'created_time' not in kwargs:
+                kwargs['created_time'] = current_time
+            if 'updated_time' not in kwargs:
+                kwargs['updated_time'] = current_time
             
             # 构建SQL语句
             fields = list(kwargs.keys())
@@ -483,8 +501,8 @@ class ProfileDatabase:
             if 'reference_urls' in kwargs and isinstance(kwargs['reference_urls'], list):
                 kwargs['reference_urls'] = json.dumps(kwargs['reference_urls'], ensure_ascii=False)
             
-            # 添加更新时间
-            kwargs['updated_time'] = datetime.now().isoformat()
+            # 添加更新时间（使用本地时区）
+            kwargs['updated_time'] = self._get_local_time()
             
             # 构建SQL语句
             set_clauses = [f"{field} = ?" for field in kwargs.keys()]
