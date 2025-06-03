@@ -90,17 +90,17 @@ class FocusTools(BaseTools):
                     update_data['content'] = content
                 if priority is not None:
                     update_data['priority'] = priority
-                if status is not None:
+                if status != 'active':
                     update_data['status'] = status
                 if context is not None:
                     update_data['context'] = context
                 if keywords is not None:
                     update_data['keywords'] = keywords
-                if source_app is not None:
+                if source_app != 'unknown':
                     update_data['source_app'] = source_app
                 if deadline is not None:
                     update_data['deadline'] = deadline
-                if privacy_level is not None:
+                if privacy_level != 'public':
                     update_data['privacy_level'] = privacy_level
                 
                 if not update_data:

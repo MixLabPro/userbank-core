@@ -90,15 +90,15 @@ class PredictionTools(BaseTools):
                     update_data['timeframe'] = timeframe
                 if basis is not None:
                     update_data['basis'] = basis
-                if verification_status is not None:
+                if verification_status != 'pending':
                     update_data['verification_status'] = verification_status
                 if keywords is not None:
                     update_data['keywords'] = keywords
-                if source_app is not None:
+                if source_app != 'unknown':
                     update_data['source_app'] = source_app
                 if reference_urls is not None:
                     update_data['reference_urls'] = reference_urls
-                if privacy_level is not None:
+                if privacy_level != 'public':
                     update_data['privacy_level'] = privacy_level
                 
                 if not update_data:
