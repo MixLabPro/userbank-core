@@ -3,7 +3,6 @@
 Database Management Module
 
 负责创建和管理个人画像数据结构的SQLite数据库
-基于database 0.3.md文档的完整实现
 """
 
 import sqlite3
@@ -32,7 +31,7 @@ class ProfileDatabase:
         self.connection = None
         self.cursor = None
         
-        # 定义所有表名和中文描述（基于database 0.3.md）
+        # 定义所有表名和中文描述
         self.tables = {
             # 核心表
             'persona': '人物档案',
@@ -99,7 +98,7 @@ class ProfileDatabase:
             return False
     
     def _create_tables(self):
-        """创建所有数据表（基于database 0.3.md）"""
+        """创建所有数据表"""
         try:
             # 1. Persona（人物档案表）- 系统核心
             self.cursor.execute("""
@@ -301,7 +300,7 @@ class ProfileDatabase:
             raise
     
     def _create_indexes(self):
-        """创建索引（基于database 0.3.md）"""
+        """创建索引"""
         try:
             # Persona表索引
             self.cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_persona_id ON persona(id)")
