@@ -1,17 +1,17 @@
 """
-方法论工具
+Methodology tools
 """
 
 from typing import Dict, Any, Optional, List
 from .base import BaseTools
 
 class MethodologyTools(BaseTools):
-    """方法论工具类"""
+    """Methodology tools class"""
     
     def query_methodologies(self, filter: Optional[Dict[str, Any]] = None, 
                            sort_by: str = 'created_time', sort_order: str = 'desc', 
                            limit: int = 20, offset: int = 0) -> Dict[str, Any]:
-        """查询方法论数据"""
+        """Query methodology data"""
         try:
             allowed_filters = [
                 'ids', 'content_contains', 'type_is', 'type_contains', 'effectiveness_is',
@@ -21,32 +21,32 @@ class MethodologyTools(BaseTools):
             filter_conditions = self._build_filter_conditions(filter or {}, allowed_filters)
             records, total_count = self.db.query_records('methodology', filter_conditions, sort_by, sort_order, limit, offset)
             
-            template = """# 用户方法论数据
+            template = """# User Methodology Data
 
-以下是根据您的查询条件检索到的用户方法论记录：
+The following are user methodology records retrieved based on your query criteria:
 
 {{#each raw_data}}
-## 方法论记录 (ID: {{this.id}})
-- **方法论内容 (content)**: {{this.content}}
-- **类型 (type)**: {{this.type}}
-- **有效性 (effectiveness)**: {{this.effectiveness}} (可选值: proven/已验证有效, experimental/实验性, theoretical/理论性)
-- **适用场景 (use_cases)**: {{this.use_cases}}
-- **关键词 (keywords)**: {{this.keywords}}
-- **数据来源应用 (source_app)**: {{this.source_app}}
-- **参考链接 (reference_urls)**: {{this.reference_urls}}
-- **隐私级别 (privacy_level)**: {{this.privacy_level}}
-- **记录创建时间 (created_time)**: {{this.created_time}}
-- **记录更新时间 (updated_time)**: {{this.updated_time}}
+## Methodology Record (ID: {{this.id}})
+- **Methodology Content (content)**: {{this.content}}
+- **Type (type)**: {{this.type}}
+- **Effectiveness (effectiveness)**: {{this.effectiveness}} (Options: proven/proven effective, experimental/experimental, theoretical/theoretical)
+- **Use Cases (use_cases)**: {{this.use_cases}}
+- **Keywords (keywords)**: {{this.keywords}}
+- **Source App (source_app)**: {{this.source_app}}
+- **Reference URLs (reference_urls)**: {{this.reference_urls}}
+- **Privacy Level (privacy_level)**: {{this.privacy_level}}
+- **Created Time (created_time)**: {{this.created_time}}
+- **Updated Time (updated_time)**: {{this.updated_time}}
 ---
 {{/each}}
 
 {{#if (eq raw_data.length 0)}}
-未找到符合条件的方法论记录。
+No methodology records found matching the criteria.
 {{/if}}
 
-**查询摘要:**
-- 总共找到 {{total_count}} 条相关记录。
-- 当前显示 {{raw_data.length}} 条记录。"""
+**Query Summary:**
+- Total {{total_count}} related records found.
+- Currently displaying {{raw_data.length}} records."""
             
             return self._generate_query_response(records, total_count, template)
             
@@ -58,12 +58,12 @@ class MethodologyTools(BaseTools):
                         use_cases: Optional[str] = None, keywords: Optional[List[str]] = None,
                         source_app: str = 'unknown', reference_urls: Optional[List[str]] = None,
                         privacy_level: str = 'public') -> Dict[str, Any]:
-        """保存方法论数据"""
+        """Save methodology data"""
         try:
             if id is None:
-                # 创建新记录
+                # Create new record
                 if not content:
-                    return self._create_error_response("创建方法论记录需要提供 content")
+                    return self._create_error_response("Creating methodology record requires content")
                 
                 record_id = self.db.insert_record('methodology',
                                                content=content,
@@ -77,7 +77,7 @@ class MethodologyTools(BaseTools):
                 
                 return self._create_success_response(record_id, "created")
             else:
-                # 更新现有记录
+                # Update existing record
                 update_data = {}
                 if content is not None:
                     update_data['content'] = content
@@ -103,7 +103,7 @@ class MethodologyTools(BaseTools):
                 if success:
                     return self._create_success_response(id, "updated")
                 else:
-                    return self._create_error_response("更新失败", id)
+                    return self._create_error_response("Update failed", id)
                     
         except Exception as e:
             return self._create_error_response(str(e)) 

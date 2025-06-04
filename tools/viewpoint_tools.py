@@ -1,17 +1,17 @@
 """
-观点工具
+Viewpoint tools
 """
 
 from typing import Dict, Any, Optional, List
 from .base import BaseTools
 
 class ViewpointTools(BaseTools):
-    """观点工具类"""
+    """Viewpoint tools class"""
     
     def query_viewpoints(self, filter: Optional[Dict[str, Any]] = None, 
                         sort_by: str = 'created_time', sort_order: str = 'desc', 
                         limit: int = 20, offset: int = 0) -> Dict[str, Any]:
-        """查询观点数据"""
+        """Query viewpoint data"""
         try:
             allowed_filters = [
                 'ids', 'content_contains', 'source_people_contains', 'related_event_contains',
@@ -21,31 +21,31 @@ class ViewpointTools(BaseTools):
             filter_conditions = self._build_filter_conditions(filter or {}, allowed_filters)
             records, total_count = self.db.query_records('viewpoint', filter_conditions, sort_by, sort_order, limit, offset)
             
-            template = """# 用户观点数据
+            template = """# User Viewpoint Data
 
-以下是根据您的查询条件检索到的用户观点记录：
+The following are user viewpoint records retrieved based on your query criteria:
 
 {{#each raw_data}}
-## 观点记录 (ID: {{this.id}})
-- **核心观点 (content)**: {{this.content}}
-- **观点来源人 (source_people)**: {{this.source_people}}
-- **相关事件 (related_event)**: {{this.related_event}}
-- **关键词 (keywords)**: {{this.keywords}}
-- **数据来源应用 (source_app)**: {{this.source_app}}
-- **参考链接 (reference_urls)**: {{this.reference_urls}}
-- **隐私级别 (privacy_level)**: {{this.privacy_level}}
-- **记录创建时间 (created_time)**: {{this.created_time}}
-- **记录更新时间 (updated_time)**: {{this.updated_time}}
+## Viewpoint Record (ID: {{this.id}})
+- **Core Viewpoint**: {{this.content}}
+- **Source Person**: {{this.source_people}}
+- **Related Event**: {{this.related_event}}
+- **Keywords**: {{this.keywords}}
+- **Source App**: {{this.source_app}}
+- **Reference URLs**: {{this.reference_urls}}
+- **Privacy Level**: {{this.privacy_level}}
+- **Created Time**: {{this.created_time}}
+- **Updated Time**: {{this.updated_time}}
 ---
 {{/each}}
 
 {{#if (eq raw_data.length 0)}}
-未找到符合条件的观点记录。
+No viewpoint records found matching the criteria.
 {{/if}}
 
-**查询摘要:**
-- 总共找到 {{total_count}} 条相关记录。
-- 当前显示 {{raw_data.length}} 条记录。"""
+**Query Summary:**
+- Total {{total_count}} related records found.
+- Currently displaying {{raw_data.length}} records."""
             
             return self._generate_query_response(records, total_count, template)
             
@@ -56,12 +56,12 @@ class ViewpointTools(BaseTools):
                       source_people: Optional[str] = None, keywords: Optional[List[str]] = None,
                       source_app: str = 'unknown', related_event: Optional[str] = None,
                       reference_urls: Optional[List[str]] = None, privacy_level: str = 'public') -> Dict[str, Any]:
-        """保存观点数据"""
+        """Save viewpoint data"""
         try:
             if id is None:
-                # 创建新记录
+                # Create new record
                 if not content:
-                    return self._create_error_response("创建观点记录需要提供 content")
+                    return self._create_error_response("Creating viewpoint record requires content")
                 
                 record_id = self.db.insert_record('viewpoint',
                                                content=content,
@@ -74,7 +74,7 @@ class ViewpointTools(BaseTools):
                 
                 return self._create_success_response(record_id, "created")
             else:
-                # 更新现有记录
+                # Update existing record
                 update_data = {}
                 if content is not None:
                     update_data['content'] = content
@@ -98,7 +98,7 @@ class ViewpointTools(BaseTools):
                 if success:
                     return self._create_success_response(id, "updated")
                 else:
-                    return self._create_error_response("更新失败", id)
+                    return self._create_error_response("Update failed", id)
                     
         except Exception as e:
             return self._create_error_response(str(e)) 

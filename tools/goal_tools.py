@@ -1,17 +1,17 @@
 """
-目标工具
+Goal tools
 """
 
 from typing import Dict, Any, Optional, List
 from .base import BaseTools
 
 class GoalTools(BaseTools):
-    """目标工具类"""
+    """Goal tools class"""
     
     def query_goals(self, filter: Optional[Dict[str, Any]] = None, 
                    sort_by: str = 'deadline', sort_order: str = 'asc', 
                    limit: int = 20, offset: int = 0) -> Dict[str, Any]:
-        """查询目标数据"""
+        """Query goal data"""
         try:
             allowed_filters = [
                 'ids', 'content_contains', 'type_is', 'type_in', 'deadline_from', 'deadline_to',
@@ -21,31 +21,31 @@ class GoalTools(BaseTools):
             filter_conditions = self._build_filter_conditions(filter or {}, allowed_filters)
             records, total_count = self.db.query_records('goal', filter_conditions, sort_by, sort_order, limit, offset)
             
-            template = """# 用户目标数据
+            template = """# User Goal Data
 
-以下是根据您的查询条件检索到的用户目标记录：
+The following are user goal records retrieved based on your query criteria:
 
 {{#each raw_data}}
-## 目标记录 (ID: {{this.id}})
-- **目标内容 (content)**: {{this.content}}
-- **目标类型 (type)**: {{this.type}} (可选值: long_term/长期目标, short_term/短期目标, plan/计划, todo/待办事项)
-- **截止日期 (deadline)**: {{this.deadline}}
-- **当前状态 (status)**: {{this.status}} (可选值: planning/计划中, in_progress/进行中, completed/已完成, abandoned/已放弃)
-- **关键词 (keywords)**: {{this.keywords}}
-- **数据来源应用 (source_app)**: {{this.source_app}}
-- **隐私级别 (privacy_level)**: {{this.privacy_level}}
-- **记录创建时间 (created_time)**: {{this.created_time}}
-- **记录更新时间 (updated_time)**: {{this.updated_time}}
+## Goal Record (ID: {{this.id}})
+- **Goal Content (content)**: {{this.content}}
+- **Goal Type (type)**: {{this.type}} (Options: long_term/long-term goal, short_term/short-term goal, plan/plan, todo/todo item)
+- **Deadline (deadline)**: {{this.deadline}}
+- **Current Status (status)**: {{this.status}} (Options: planning/planning, in_progress/in progress, completed/completed, abandoned/abandoned)
+- **Keywords (keywords)**: {{this.keywords}}
+- **Source App (source_app)**: {{this.source_app}}
+- **Privacy Level (privacy_level)**: {{this.privacy_level}}
+- **Created Time (created_time)**: {{this.created_time}}
+- **Updated Time (updated_time)**: {{this.updated_time}}
 ---
 {{/each}}
 
 {{#if (eq raw_data.length 0)}}
-未找到符合条件的目标记录。
+No goal records found matching the criteria.
 {{/if}}
 
-**查询摘要:**
-- 总共找到 {{total_count}} 条相关记录。
-- 当前显示 {{raw_data.length}} 条记录。"""
+**Query Summary:**
+- Total {{total_count}} related records found.
+- Currently displaying {{raw_data.length}} records."""
             
             return self._generate_query_response(records, total_count, template)
             
@@ -56,12 +56,12 @@ class GoalTools(BaseTools):
                  type: Optional[str] = None, deadline: Optional[str] = None,
                  status: str = 'planning', keywords: Optional[List[str]] = None,
                  source_app: str = 'unknown', privacy_level: str = 'public') -> Dict[str, Any]:
-        """保存目标数据"""
+        """Save goal data"""
         try:
             if id is None:
-                # 创建新记录
+                # Create new record
                 if not content or not type:
-                    return self._create_error_response("创建目标记录需要提供 content 和 type")
+                    return self._create_error_response("Creating goal record requires content and type")
                 
                 record_id = self.db.insert_record('goal',
                                                content=content,
@@ -74,7 +74,7 @@ class GoalTools(BaseTools):
                 
                 return self._create_success_response(record_id, "created")
             else:
-                # 更新现有记录
+                # Update existing record
                 update_data = {}
                 if content is not None:
                     update_data['content'] = content
@@ -98,7 +98,7 @@ class GoalTools(BaseTools):
                 if success:
                     return self._create_success_response(id, "updated")
                 else:
-                    return self._create_error_response("更新失败", id)
+                    return self._create_error_response("Update failed", id)
                     
         except Exception as e:
             return self._create_error_response(str(e)) 

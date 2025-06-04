@@ -1,17 +1,17 @@
 """
-关注点工具
+Focus tools
 """
 
 from typing import Dict, Any, Optional, List
 from .base import BaseTools
 
 class FocusTools(BaseTools):
-    """关注点工具类"""
+    """Focus tools class"""
     
     def query_focuses(self, filter: Optional[Dict[str, Any]] = None, 
                      sort_by: str = 'priority', sort_order: str = 'desc', 
                      limit: int = 20, offset: int = 0) -> Dict[str, Any]:
-        """查询关注点数据"""
+        """Query focus data"""
         try:
             allowed_filters = [
                 'ids', 'content_contains', 'priority_gte', 'status_is', 'status_in',
@@ -22,32 +22,32 @@ class FocusTools(BaseTools):
             filter_conditions = self._build_filter_conditions(filter or {}, allowed_filters)
             records, total_count = self.db.query_records('focus', filter_conditions, sort_by, sort_order, limit, offset)
             
-            template = """# 用户关注点数据
+            template = """# User Focus Data
 
-以下是根据您的查询条件检索到的用户当前关注点记录：
+The following are user focus records retrieved based on your query criteria:
 
 {{#each raw_data}}
-## 关注点记录 (ID: {{this.id}})
-- **关注内容 (content)**: {{this.content}}
-- **优先级 (priority)**: {{this.priority}} (1-10，10为最高)
-- **状态 (status)**: {{this.status}} (可选值: active/进行中, paused/暂停, completed/已完成)
-- **上下文 (context)**: {{this.context}}
-- **关键词 (keywords)**: {{this.keywords}}
-- **数据来源应用 (source_app)**: {{this.source_app}}
-- **截止日期 (deadline)**: {{this.deadline}}
-- **隐私级别 (privacy_level)**: {{this.privacy_level}}
-- **记录创建时间 (created_time)**: {{this.created_time}}
-- **记录更新时间 (updated_time)**: {{this.updated_time}}
+## Focus Record (ID: {{this.id}})
+- **Focus Content (content)**: {{this.content}}
+- **Priority (priority)**: {{this.priority}} (1-10, 10 is highest)
+- **Status (status)**: {{this.status}} (Options: active/in progress, paused/paused, completed/completed)
+- **Context (context)**: {{this.context}}
+- **Keywords (keywords)**: {{this.keywords}}
+- **Source App (source_app)**: {{this.source_app}}
+- **Deadline (deadline)**: {{this.deadline}}
+- **Privacy Level (privacy_level)**: {{this.privacy_level}}
+- **Created Time (created_time)**: {{this.created_time}}
+- **Updated Time (updated_time)**: {{this.updated_time}}
 ---
 {{/each}}
 
 {{#if (eq raw_data.length 0)}}
-未找到符合条件的关注点记录。
+No focus records found matching the criteria.
 {{/if}}
 
-**查询摘要:**
-- 总共找到 {{total_count}} 条相关记录。
-- 当前显示 {{raw_data.length}} 条记录。"""
+**Query Summary:**
+- Total {{total_count}} related records found.
+- Currently displaying {{raw_data.length}} records."""
             
             return self._generate_query_response(records, total_count, template)
             
@@ -59,12 +59,12 @@ class FocusTools(BaseTools):
                   context: Optional[str] = None, keywords: Optional[List[str]] = None,
                   source_app: str = 'unknown', deadline: Optional[str] = None,
                   privacy_level: str = 'public') -> Dict[str, Any]:
-        """保存关注点数据"""
+        """Save focus data"""
         try:
             if id is None:
-                # 创建新记录
+                # Create new record
                 if not content or priority is None:
-                    return self._create_error_response("创建关注点记录需要提供 content 和 priority")
+                    return self._create_error_response("Creating focus record requires content and priority")
                 
                 record_data = {
                     'content': content,
@@ -84,7 +84,7 @@ class FocusTools(BaseTools):
                 record_id = self.db.insert_record('focus', **record_data)
                 return self._create_success_response(record_id, "created")
             else:
-                # 更新现有记录
+                # Update existing record
                 update_data = {}
                 if content is not None:
                     update_data['content'] = content
@@ -110,7 +110,7 @@ class FocusTools(BaseTools):
                 if success:
                     return self._create_success_response(id, "updated")
                 else:
-                    return self._create_error_response("更新失败", id)
+                    return self._create_error_response("Update failed", id)
                     
         except Exception as e:
             return self._create_error_response(str(e)) 

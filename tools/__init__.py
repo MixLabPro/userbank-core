@@ -1,5 +1,5 @@
 """
-个人画像数据管理系统 - 工具模块
+Personal Profile Data Management System - Tools Module
 """
 
 from .base import BaseTools, generate_prompt_content, TABLE_DESCRIPTIONS

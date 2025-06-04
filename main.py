@@ -1,6 +1,6 @@
 """
-个人画像数据管理系统 - 重构版本
-使用模块化的工具结构
+Personal Profile Data Management System
+Using modular tool structure
 """
 
 from mcp.server.fastmcp import FastMCP
@@ -10,17 +10,25 @@ import os
 from pathlib import Path
 from datetime import datetime
 
-# 导入工具模块
+# Import configuration manager
+from config_manager import get_config_manager
+
+# Import tool modules
 from tools import (
     PersonaTools, MemoryTools, ViewpointTools, InsightTools,
     GoalTools, PreferenceTools, MethodologyTools, FocusTools,
     PredictionTools, DatabaseTools
 )
 
-# 创建FastMCP服务器实例
-mcp = FastMCP("个人画像数据管理系统")
+# Initialize configuration manager
+config_manager = get_config_manager()
+print(f"Database path: {config_manager.get_database_path()}")
+print(f"Configuration file path: {config_manager.config_path}")
 
-# 初始化工具实例
+# Create FastMCP server instance
+mcp = FastMCP("Personal Profile Data Management System")
+
+# Initialize tool instances
 persona_tools = PersonaTools()
 memory_tools = MemoryTools()
 viewpoint_tools = ViewpointTools()
@@ -32,20 +40,20 @@ focus_tools = FocusTools()
 prediction_tools = PredictionTools()
 database_tools = DatabaseTools()
 
-# ============ 人物档案相关操作 ============
+# ============ Persona Related Operations ============
 
 @mcp.tool()
 def get_persona() -> Dict[str, Any]:
-    """获取当前用户的核心画像信息。该信息用于AI进行个性化交互。系统中只有一个用户画像，ID固定为1。"""
+    """Get current user's core profile information. This information is used for AI personalized interaction. There is only one user profile in the system with fixed ID 1."""
     return persona_tools.get_persona()
 
 @mcp.tool()
 def save_persona(name: str = None, gender: str = None, personality: str = None, 
                 avatar_url: str = None, bio: str = None, privacy_level: str = None) -> Dict[str, Any]:
-    """保存（更新）当前用户的核心画像信息。由于ID固定为1，此操作主要用于更新现有画像。只需提供需要修改的字段。"""
+    """Save (update) current user's core profile information. Since ID is fixed as 1, this operation is mainly used to update existing profile. Only provide fields that need to be modified."""
     return persona_tools.save_persona(name, gender, personality, avatar_url, bio, privacy_level)
 
-# ============ 记忆工具 ============
+# ============ Memory Tools ============
 
 @mcp.tool()
 def manage_memories(action: str, id: int = None, content: str = None, memory_type: str = None,
@@ -54,18 +62,18 @@ def manage_memories(action: str, id: int = None, content: str = None, memory_typ
                    reference_urls: List[str] = None, privacy_level: str = 'public',
                    filter: Dict[str, Any] = None, sort_by: str = 'created_time', 
                    sort_order: str = 'desc', limit: int = 20, offset: int = 0) -> Dict[str, Any]:
-    """记忆数据管理工具。支持查询和保存操作。
+    """Memory data management tool. Supports query and save operations.
     
-    参数说明：
-    - action: 操作类型，'query'(查询) 或 'save'(保存)
+    Parameter description:
+    - action: Operation type, 'query' (query) or 'save' (save)
     
-    查询操作 (action='query') 使用参数：
-    - filter: 查询条件字典
-    - sort_by, sort_order, limit, offset: 排序和分页参数
+    Query operation (action='query') uses parameters:
+    - filter: Query condition dictionary
+    - sort_by, sort_order, limit, offset: Sorting and pagination parameters
     
-    保存操作 (action='save') 使用参数：
-    - id: 记录ID，None表示创建新记录，有值表示更新现有记录
-    - content, memory_type, importance 等: 记忆数据字段
+    Save operation (action='save') uses parameters:
+    - id: Record ID, None means create new record, value means update existing record
+    - content, memory_type, importance etc: Memory data fields
     """
     if action == "query":
         return memory_tools.query_memories(filter, sort_by, sort_order, limit, offset)
@@ -77,10 +85,10 @@ def manage_memories(action: str, id: int = None, content: str = None, memory_typ
         return {
             "operation": "error",
             "timestamp": datetime.now().isoformat(),
-            "error": f"无效的操作类型: {action}，支持的操作: 'query', 'save'"
+            "error": f"Invalid operation type: {action}, supported operations: 'query', 'save'"
         }
 
-# ============ 观点工具 ============
+# ============ Viewpoint Tools ============
 
 @mcp.tool()
 def manage_viewpoints(action: str, id: int = None, content: str = None, source_people: str = None,
@@ -89,7 +97,7 @@ def manage_viewpoints(action: str, id: int = None, content: str = None, source_p
                      privacy_level: str = 'public', filter: Dict[str, Any] = None, 
                      sort_by: str = 'created_time', sort_order: str = 'desc', 
                      limit: int = 20, offset: int = 0) -> Dict[str, Any]:
-    """观点数据管理工具。支持查询和保存操作。"""
+    """Viewpoint data management tool. Supports query and save operations."""
     if action == "query":
         return viewpoint_tools.query_viewpoints(filter, sort_by, sort_order, limit, offset)
     elif action == "save":
@@ -99,10 +107,10 @@ def manage_viewpoints(action: str, id: int = None, content: str = None, source_p
         return {
             "operation": "error",
             "timestamp": datetime.now().isoformat(),
-            "error": f"无效的操作类型: {action}，支持的操作: 'query', 'save'"
+            "error": f"Invalid operation type: {action}, supported operations: 'query', 'save'"
         }
 
-# ============ 洞察工具 ============
+# ============ Insight Tools ============
 
 @mcp.tool()
 def manage_insights(action: str, id: int = None, content: str = None, source_people: str = None,
@@ -110,7 +118,7 @@ def manage_insights(action: str, id: int = None, content: str = None, source_peo
                    reference_urls: List[str] = None, privacy_level: str = 'public',
                    filter: Dict[str, Any] = None, sort_by: str = 'created_time', 
                    sort_order: str = 'desc', limit: int = 20, offset: int = 0) -> Dict[str, Any]:
-    """洞察数据管理工具。支持查询和保存操作。"""
+    """Insight data management tool. Supports query and save operations."""
     if action == "query":
         return insight_tools.query_insights(filter, sort_by, sort_order, limit, offset)
     elif action == "save":
@@ -120,10 +128,10 @@ def manage_insights(action: str, id: int = None, content: str = None, source_peo
         return {
             "operation": "error",
             "timestamp": datetime.now().isoformat(),
-            "error": f"无效的操作类型: {action}，支持的操作: 'query', 'save'"
+            "error": f"Invalid operation type: {action}, supported operations: 'query', 'save'"
         }
 
-# ============ 目标工具 ============
+# ============ Goal Tools ============
 
 @mcp.tool()
 def manage_goals(action: str, id: int = None, content: str = None, type: str = None, 
@@ -131,7 +139,7 @@ def manage_goals(action: str, id: int = None, content: str = None, type: str = N
                 source_app: str = 'unknown', privacy_level: str = 'public',
                 filter: Dict[str, Any] = None, sort_by: str = 'deadline', 
                 sort_order: str = 'asc', limit: int = 20, offset: int = 0) -> Dict[str, Any]:
-    """目标数据管理工具。支持查询和保存操作。"""
+    """Goal data management tool. Supports query and save operations."""
     if action == "query":
         return goal_tools.query_goals(filter, sort_by, sort_order, limit, offset)
     elif action == "save":
@@ -141,10 +149,10 @@ def manage_goals(action: str, id: int = None, content: str = None, type: str = N
         return {
             "operation": "error",
             "timestamp": datetime.now().isoformat(),
-            "error": f"无效的操作类型: {action}，支持的操作: 'query', 'save'"
+            "error": f"Invalid operation type: {action}, supported operations: 'query', 'save'"
         }
 
-# ============ 偏好工具 ============
+# ============ Preference Tools ============
 
 @mcp.tool()
 def manage_preferences(action: str, id: int = None, content: str = None, context: str = None,
@@ -152,7 +160,7 @@ def manage_preferences(action: str, id: int = None, content: str = None, context
                       privacy_level: str = 'public', filter: Dict[str, Any] = None, 
                       sort_by: str = 'created_time', sort_order: str = 'desc', 
                       limit: int = 20, offset: int = 0) -> Dict[str, Any]:
-    """偏好数据管理工具。支持查询和保存操作。"""
+    """Preference data management tool. Supports query and save operations."""
     if action == "query":
         return preference_tools.query_preferences(filter, sort_by, sort_order, limit, offset)
     elif action == "save":
@@ -162,10 +170,10 @@ def manage_preferences(action: str, id: int = None, content: str = None, context
         return {
             "operation": "error",
             "timestamp": datetime.now().isoformat(),
-            "error": f"无效的操作类型: {action}，支持的操作: 'query', 'save'"
+            "error": f"Invalid operation type: {action}, supported operations: 'query', 'save'"
         }
 
-# ============ 方法论工具 ============
+# ============ Methodology Tools ============
 
 @mcp.tool()
 def manage_methodologies(action: str, id: int = None, content: str = None, type: str = None,
@@ -174,7 +182,7 @@ def manage_methodologies(action: str, id: int = None, content: str = None, type:
                         reference_urls: List[str] = None, privacy_level: str = 'public',
                         filter: Dict[str, Any] = None, sort_by: str = 'created_time', 
                         sort_order: str = 'desc', limit: int = 20, offset: int = 0) -> Dict[str, Any]:
-    """方法论数据管理工具。支持查询和保存操作。"""
+    """Methodology data management tool. Supports query and save operations."""
     if action == "query":
         return methodology_tools.query_methodologies(filter, sort_by, sort_order, limit, offset)
     elif action == "save":
@@ -184,10 +192,10 @@ def manage_methodologies(action: str, id: int = None, content: str = None, type:
         return {
             "operation": "error",
             "timestamp": datetime.now().isoformat(),
-            "error": f"无效的操作类型: {action}，支持的操作: 'query', 'save'"
+            "error": f"Invalid operation type: {action}, supported operations: 'query', 'save'"
         }
 
-# ============ 关注点工具 ============
+# ============ Focus Tools ============
 
 @mcp.tool()
 def manage_focuses(action: str, id: int = None, content: str = None, priority: int = None, 
@@ -195,7 +203,7 @@ def manage_focuses(action: str, id: int = None, content: str = None, priority: i
                   source_app: str = 'unknown', deadline: str = None, privacy_level: str = 'public',
                   filter: Dict[str, Any] = None, sort_by: str = 'priority', 
                   sort_order: str = 'desc', limit: int = 20, offset: int = 0) -> Dict[str, Any]:
-    """关注点数据管理工具。支持查询和保存操作。"""
+    """Focus data management tool. Supports query and save operations."""
     if action == "query":
         return focus_tools.query_focuses(filter, sort_by, sort_order, limit, offset)
     elif action == "save":
@@ -205,10 +213,10 @@ def manage_focuses(action: str, id: int = None, content: str = None, priority: i
         return {
             "operation": "error",
             "timestamp": datetime.now().isoformat(),
-            "error": f"无效的操作类型: {action}，支持的操作: 'query', 'save'"
+            "error": f"Invalid operation type: {action}, supported operations: 'query', 'save'"
         }
 
-# ============ 预测工具 ============
+# ============ Prediction Tools ============
 
 @mcp.tool()
 def manage_predictions(action: str, id: int = None, content: str = None, timeframe: str = None, 
@@ -217,7 +225,7 @@ def manage_predictions(action: str, id: int = None, content: str = None, timefra
                       reference_urls: List[str] = None, privacy_level: str = 'public',
                       filter: Dict[str, Any] = None, sort_by: str = 'created_time', 
                       sort_order: str = 'desc', limit: int = 20, offset: int = 0) -> Dict[str, Any]:
-    """预测数据管理工具。支持查询和保存操作。"""
+    """Prediction data management tool. Supports query and save operations."""
     if action == "query":
         return prediction_tools.query_predictions(filter, sort_by, sort_order, limit, offset)
     elif action == "save":
@@ -227,22 +235,22 @@ def manage_predictions(action: str, id: int = None, content: str = None, timefra
         return {
             "operation": "error",
             "timestamp": datetime.now().isoformat(),
-            "error": f"无效的操作类型: {action}，支持的操作: 'query', 'save'"
+            "error": f"Invalid operation type: {action}, supported operations: 'query', 'save'"
         }
 
-# ============ 数据库工具 ============
+# ============ Database Tools ============
 
 @mcp.tool()
 def execute_custom_sql(sql: str, params: List[str] = None, fetch_results: bool = True) -> Dict[str, Any]:
-    """执行自定义SQL语句"""
+    """Execute custom SQL statement"""
     return database_tools.execute_custom_sql(sql, params, fetch_results)
 
 @mcp.tool()
 def get_table_schema(table_name: str = None) -> Dict[str, Any]:
-    """获取表结构信息"""
+    """Get table structure information"""
     return database_tools.get_table_schema(table_name)
 
-# ============ 启动服务器 ============
+# ============ Start Server ============
 
 if __name__ == "__main__":
     mcp.run()

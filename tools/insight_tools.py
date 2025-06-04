@@ -1,17 +1,17 @@
 """
-洞察工具
+Insight tools
 """
 
 from typing import Dict, Any, Optional, List
 from .base import BaseTools
 
 class InsightTools(BaseTools):
-    """洞察工具类"""
+    """Insight tools class"""
     
     def query_insights(self, filter: Optional[Dict[str, Any]] = None, 
                       sort_by: str = 'created_time', sort_order: str = 'desc', 
                       limit: int = 20, offset: int = 0) -> Dict[str, Any]:
-        """查询洞察数据"""
+        """Query insight data"""
         try:
             allowed_filters = [
                 'ids', 'content_contains', 'source_people_contains',
@@ -21,30 +21,30 @@ class InsightTools(BaseTools):
             filter_conditions = self._build_filter_conditions(filter or {}, allowed_filters)
             records, total_count = self.db.query_records('insight', filter_conditions, sort_by, sort_order, limit, offset)
             
-            template = """# 用户洞察数据
+            template = """# User Insight Data
 
-以下是根据您的查询条件检索到的用户洞察记录：
+The following are user insight records retrieved based on your query criteria:
 
 {{#each raw_data}}
-## 洞察记录 (ID: {{this.id}})
-- **核心洞察 (content)**: {{this.content}}
-- **洞察来源人 (source_people)**: {{this.source_people}}
-- **关键词 (keywords)**: {{this.keywords}}
-- **数据来源应用 (source_app)**: {{this.source_app}}
-- **参考链接 (reference_urls)**: {{this.reference_urls}}
-- **隐私级别 (privacy_level)**: {{this.privacy_level}}
-- **记录创建时间 (created_time)**: {{this.created_time}}
-- **记录更新时间 (updated_time)**: {{this.updated_time}}
+## Insight Record (ID: {{this.id}})
+- **Core Insight (content)**: {{this.content}}
+- **Source Person (source_people)**: {{this.source_people}}
+- **Keywords (keywords)**: {{this.keywords}}
+- **Source App (source_app)**: {{this.source_app}}
+- **Reference URLs (reference_urls)**: {{this.reference_urls}}
+- **Privacy Level (privacy_level)**: {{this.privacy_level}}
+- **Created Time (created_time)**: {{this.created_time}}
+- **Updated Time (updated_time)**: {{this.updated_time}}
 ---
 {{/each}}
 
 {{#if (eq raw_data.length 0)}}
-未找到符合条件的洞察记录。
+No insight records found matching the criteria.
 {{/if}}
 
-**查询摘要:**
-- 总共找到 {{total_count}} 条相关记录。
-- 当前显示 {{raw_data.length}} 条记录。"""
+**Query Summary:**
+- Total {{total_count}} related records found.
+- Currently displaying {{raw_data.length}} records."""
             
             return self._generate_query_response(records, total_count, template)
             
@@ -55,12 +55,12 @@ class InsightTools(BaseTools):
                     source_people: Optional[str] = None, keywords: Optional[List[str]] = None,
                     source_app: str = 'unknown', reference_urls: Optional[List[str]] = None,
                     privacy_level: str = 'public') -> Dict[str, Any]:
-        """保存洞察数据"""
+        """Save insight data"""
         try:
             if id is None:
-                # 创建新记录
+                # Create new record
                 if not content:
-                    return self._create_error_response("创建洞察记录需要提供 content")
+                    return self._create_error_response("Creating insight record requires content")
                 
                 record_id = self.db.insert_record('insight',
                                                content=content,
@@ -72,7 +72,7 @@ class InsightTools(BaseTools):
                 
                 return self._create_success_response(record_id, "created")
             else:
-                # 更新现有记录
+                # Update existing record
                 update_data = {}
                 if content is not None:
                     update_data['content'] = content
@@ -94,7 +94,7 @@ class InsightTools(BaseTools):
                 if success:
                     return self._create_success_response(id, "updated")
                 else:
-                    return self._create_error_response("更新失败", id)
+                    return self._create_error_response("Update failed", id)
                     
         except Exception as e:
             return self._create_error_response(str(e)) 
