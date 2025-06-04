@@ -3,12 +3,15 @@
 使用 FastMCP 的 @mcp.tool() 装饰器，参数直接在函数签名中定义
 """
 
-from mcp.server.fastmcp import FastMCP
+from fastmcp import FastMCP
 from typing import List, Dict, Any, Optional, Union
 import json
 import os
 from pathlib import Path
 from datetime import datetime
+from starlette.middleware import Middleware
+from starlette.middleware.cors import CORSMiddleware
+import uvicorn
 
 # 导入工具模块
 from tools import (
@@ -16,6 +19,17 @@ from tools import (
     GoalTools, PreferenceTools, MethodologyTools, FocusTools,
     PredictionTools, DatabaseTools
 )
+
+# 定义CORS中间件
+cors_middleware = [
+    Middleware(
+        CORSMiddleware,
+        allow_origins=["*"],  # 允许所有来源，生产环境建议指定具体域名
+        allow_credentials=True,
+        allow_methods=["*"],  # 允许所有HTTP方法
+        allow_headers=["*"],  # 允许所有请求头
+    ),
+]
 
 # 创建FastMCP服务器实例
 mcp = FastMCP("个人画像数据管理系统")
@@ -246,8 +260,9 @@ def get_table_schema(table_name: str = None) -> Dict[str, Any]:
 
 if __name__ == "__main__":
     print("启动个人画像数据管理系统 - FastMCP SSE模式")
-    print("服务器地址: http://localhost:8000")
-    print("SSE端点: http://localhost:8000/sse")
+
+    # 创建带有CORS中间件的HTTP应用
+    http_app = mcp.http_app(transport="sse", middleware=cors_middleware)
     
-    # 使用 FastMCP 的 SSE 传输（默认端口8000）
-    mcp.run(transport="sse") 
+    # 使用uvicorn启动服务器
+    uvicorn.run(http_app, host="0.0.0.0", port=8000) 
