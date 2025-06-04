@@ -788,10 +788,30 @@ class ProfileDatabase:
             if not any(sql_upper.startswith(op) for op in allowed_operations):
                 raise ValueError("只允许执行SELECT、INSERT、UPDATE、DELETE语句")
             
-            # 禁止某些危险操作
-            dangerous_keywords = ['DROP', 'ALTER', 'CREATE', 'TRUNCATE', 'REPLACE']
-            if any(keyword in sql_upper for keyword in dangerous_keywords):
-                raise ValueError("禁止执行可能危险的SQL操作")
+            # 禁止某些真正危险的操作（使用更精确的匹配）
+            import re
+            dangerous_patterns = [
+                r'\bDROP\s+TABLE\b',
+                r'\bDROP\s+DATABASE\b', 
+                r'\bALTER\s+TABLE\b',
+                r'\bCREATE\s+TABLE\b',
+                r'\bTRUNCATE\s+TABLE\b',
+                r'\bDROP\s+INDEX\b'
+            ]
+            
+            # 检查是否包含危险操作
+            for pattern in dangerous_patterns:
+                if re.search(pattern, sql_upper):
+                    raise ValueError(f"禁止执行可能危险的SQL操作: 匹配模式 {pattern}")
+            
+            # 调试：打印SQL语句（临时）
+            print(f"DEBUG: SQL语句通过安全检查: {sql_upper[:100]}...")
+            
+            # 临时：检查是否有其他问题
+            if 'UNION ALL' in sql_upper and len(sql_upper) > 500:
+                print(f"DEBUG: 检测到长UNION查询，长度: {len(sql_upper)}")
+                # 暂时允许通过
+                pass
             
             self.cursor.execute(sql, params)
             
