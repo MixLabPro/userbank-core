@@ -2,3 +2,5 @@
 /Database/__pycache__
 /__pycache__
 profile_data.db
+/dist
+/tools/__pycache__
