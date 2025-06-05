@@ -6,3 +6,4 @@ profile_data.db
 /dist
 /tools/__pycache__
 *.db
+config.json
