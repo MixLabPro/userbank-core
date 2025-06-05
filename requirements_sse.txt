@@ -1,8 +1,0 @@
-# SSE模式的个人画像数据管理系统依赖
-
-# MCP核心库
-mcp>=1.0.0
-
-# Web服务器和ASGI
-uvicorn>=0.24.0
-starlette>=0.27.0
