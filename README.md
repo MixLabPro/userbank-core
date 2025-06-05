@@ -2,124 +2,126 @@
 
 <div align="center">
   
-**个人数据银行的核心实现**
+**Core Implementation of Personal Data Bank**
 
 [![Python](https://img.shields.io/badge/python-3.13+-blue.svg)](https://python.org)
 [![MCP](https://img.shields.io/badge/MCP-1.9+-green.svg)](https://modelcontextprotocol.io)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-*从"数据寄存在各个平台" 到 "拥有自己的数据银行"*
+*From "Data Hosted on Various Platforms" to "Owning Your Own Data Bank"*
 
-[快速开始](#-快速开始) • [核心功能](#-核心功能) • [使用指南](#-使用指南) • [API参考](#-api参考) • [开发指南](#-开发指南)
+[Quick Start](#-quick-start) • [Core Features](#-core-features) • [Usage Guide](#-usage-guide) • [API Reference](#-api-reference) • [Development Guide](#-development-guide)
 
 </div>
 
 ---
 
-## 🎯 什么是UserBank Core？
+## 🎯 What is UserBank Core?
 
-UserBank 全称是**Unified Smart Experience Records Bank**，基于**MCP（Model Context Protocol）** 构建的个人数据管理系统。作为UserBank的核心实现，UserBank Core让你能够统一管理与AI交互产生的所有智能经验记录。通过标准化的MCP接口，任何支持MCP的AI应用都可以安全、一致地访问你的个人数据。
+UserBank stands for **Unified Smart Experience Records Bank**, a personal data management system built on **MCP (Model Context Protocol)**. As the core implementation of UserBank, UserBank Core enables you to uniformly manage all intelligent experience records generated from AI interactions. Through standardized MCP interfaces, any AI application that supports MCP can securely and consistently access your personal data.
 
-### 解决的问题
+### Problems Solved
 
-当你与不同AI助手（Claude、ChatGPT等）交互时，数据分散存储：
+When you interact with different AI assistants (Claude, ChatGPT, etc.), data is scattered across platforms:
 
 ```
-现状：数据分散 ❌
+Current State: Scattered Data ❌
 ┌─────────────┐  ┌─────────────┐  ┌─────────────┐
-│   Claude    │  │   ChatGPT   │  │   其他AI    │
-│ 你的记忆A   │  │ 你的记忆B   │  │ 你的记忆C   │
-│ 你的偏好A   │  │ 你的偏好B   │  │ 你的偏好C   │
+│   Claude    │  │   ChatGPT   │  │  Other AI   │
+│ Your Memory A│  │ Your Memory B│  │ Your Memory C│
+│ Your Pref A  │  │ Your Pref B  │  │ Your Pref C  │
 └─────────────┘  └─────────────┘  └─────────────┘
 ```
 
-### UserBank Core解决方案
+### UserBank Core Solution
 
 ```
-UserBank Core：统一智能体验记录引擎 ✅
+UserBank Core: Unified Intelligent Experience Record Engine ✅
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Claude    │     │   ChatGPT   │     │   其他AI    │
+│   Claude    │     │   ChatGPT   │     │  Other AI   │
 └──────┬──────┘     └──────┬──────┘     └──────┬──────┘
        │                   │                   │
-       │      MCP协议      │      MCP协议      │
-       │      标准接口     │      标准接口     │
+       │   MCP Protocol    │   MCP Protocol    │
+       │ Standard Interface│ Standard Interface│
        └───────────────────┼───────────────────┘
                           │
                   ┌───────▼────────┐
                   │   UserBank     │
                   │     Core       │
                   │ ┌─────────────┐ │
-                  │ │ 统一的记忆  │ │
-                  │ │ 完整的偏好  │ │
-                  │ │ 所有观点    │ │
-                  │ │ 目标计划    │ │
-                  │ │ 方法论等    │ │
+                  │ │ Unified     │ │
+                  │ │ Memories    │ │
+                  │ │ Complete    │ │
+                  │ │ Preferences │ │
+                  │ │ All Views   │ │
+                  │ │ Goals Plans │ │
+                  │ │ Methods etc │ │
                   │ └─────────────┘ │
                   └────────────────┘
 ```
 
-## ✨ 核心功能
+## ✨ Core Features
 
-### 🏗️ 核心引擎特性
-- **MCP原生支持**：深度集成Model Context Protocol，提供标准化数据访问
-- **轻量级部署**：最小化依赖，快速启动智能体验记录银行
+### 🏗️ Core Engine Features
+- **Native MCP Support**: Deep integration with Model Context Protocol, providing standardized data access
+- **Lightweight Deployment**: Minimal dependencies, quick startup for intelligent experience record bank
 
-### 🔐 真正的数据主权
-- **你的数据存储在你控制的地方**，不是平台的"寄存品"
-- **完整导出**：一键导出所有数据，包含元数据
-- **标准化访问**：通过MCP协议实现安全、一致的数据访问
+### 🔐 True Data Sovereignty
+- **Your data is stored where you control it**, not as "deposits" on platforms
+- **Complete Export**: One-click export of all data, including metadata
+- **Standardized Access**: Secure, consistent data access through MCP protocol
 
-### 🗃️ 9种数据类型管理
-- **👤 Persona**: 个人基本信息和身份档案
-- **🧠 Memory**: AI交互记忆，支持6种类型分类
-- **💭 Viewpoint**: 个人观点和立场记录
-- **💡 Insight**: 深度洞察和感悟
-- **🎯 Goal**: 目标管理，支持长短期规划
-- **❤️ Preference**: 个人偏好设置
-- **🛠️ Methodology**: 个人方法论和最佳实践
-- **🔍 Focus**: 当前关注点和优先级管理
-- **🔮 Prediction**: 预测记录和验证追踪
+### 🗃️ 9 Data Type Management
+- **👤 Persona**: Personal basic information and identity profile
+- **🧠 Memory**: AI interaction memories, supporting 6 type classifications
+- **💭 Viewpoint**: Personal opinions and stance records
+- **💡 Insight**: Deep insights and realizations
+- **🎯 Goal**: Goal management, supporting long and short-term planning
+- **❤️ Preference**: Personal preference settings
+- **🛠️ Methodology**: Personal methodologies and best practices
+- **🔍 Focus**: Current focus points and priority management
+- **🔮 Prediction**: Prediction records and verification tracking
 
-### 🔐 隐私控制
-- **简化权限模型**: `public` / `private` 两级权限
-- **数据完全自控**: 所有数据存储在你的本地SQLite数据库
-- **选择性共享**: 可以精确控制哪些数据对AI可见
+### 🔐 Privacy Control
+- **Simplified Permission Model**: `public` / `private` two-level permissions
+- **Complete Data Self-Control**: All data stored in your local SQLite database
+- **Selective Sharing**: Precise control over which data is visible to AI
 
-### 🔄 MCP标准化接口
-- **统一访问方式**: 所有AI应用通过相同的MCP工具访问数据
-- **实时数据同步**: 支持多个AI应用同时访问最新数据
-- **标准化操作**: 查询、保存、更新等操作完全标准化
+### 🔄 MCP Standardized Interface
+- **Unified Access Method**: All AI applications access data through the same MCP tools
+- **Real-time Data Sync**: Support for multiple AI applications accessing latest data simultaneously
+- **Standardized Operations**: Query, save, update operations are completely standardized
 
-## 🚀 快速开始
+## 🚀 Quick Start
 
-### 环境要求
+### Requirements
 
 - Python 3.13+
-- 支持MCP的AI应用（如Claude Desktop等）
+- AI applications that support MCP (such as Claude Desktop, etc.)
 
-### 安装步骤
+### Installation Steps
 
-1. **克隆项目**
+1. **Clone the Project**
 ```bash
 git clone https://github.com/MixLabPro/userbank-core.git
 cd userbank-core
 ```
 
-2. **安装依赖**
+2. **Install Dependencies**
 ```bash
-# 使用uv（推荐）
+# Using uv (recommended)
 uv sync
 
-# 或使用pip
+# Or using pip
 pip install -r requirements.txt
 ```
 
-3. **配置数据库路径**
-编辑 `config.json` 文件：
+3. **Configure Database Path**
+Edit the `config.json` file:
 ```json
 {
   "database": {
-    "path": "你的数据库存储路径",
+    "path": "your_database_storage_path",
     "filename": "profile_data.db"
   },
   "server": {
@@ -129,17 +131,17 @@ pip install -r requirements.txt
 }
 ```
 
-4. **启动MCP服务器**
+4. **Start MCP Server**
 ```bash
-# 标准模式
+# Standard mode
 python main.py
 
-# 或SSE模式（支持服务器推送事件）
+# Or SSE mode (supports Server-Sent Events)
 python main_sse.py
 ```
 
-5. **配置AI应用连接**
-在支持MCP的AI应用中添加服务器配置：
+5. **Configure AI Application Connection**
+Add server configuration in MCP-supporting AI applications:
 ```json
 {
     "mcpServers": {
@@ -158,94 +160,94 @@ python main_sse.py
   }
 ```
 
-### 初始化个人档案
+### Initialize Personal Profile
 
-首次使用时，建议先设置基本的个人信息：
+For first-time use, it's recommended to set basic personal information:
 
 ```python
-# 通过MCP工具调用
+# Through MCP tool call
 save_persona(
-    name="你的姓名",
-    personality="你的性格描述",
-    bio="个人简介"
+    name="Your Name",
+    personality="Your personality description",
+    bio="Personal bio"
 )
 ```
 
-## 📊 数据模型详解
+## 📊 Data Model Details
 
-### 👤 Persona - 个人档案
+### 👤 Persona - Personal Profile
 ```typescript
 interface Persona {
-  id: 1;                     // 固定为1（系统只维护一个档案）
-  name: string;              // 姓名
-  gender?: string;           // 性别
-  personality?: string;      // 性格描述
-  avatar_url?: string;       // 头像链接
-  bio?: string;              // 个人简介
+  id: 1;                     // Fixed as 1 (system maintains only one profile)
+  name: string;              // Name
+  gender?: string;           // Gender
+  personality?: string;      // Personality description
+  avatar_url?: string;       // Avatar URL
+  bio?: string;              // Personal bio
   privacy_level: 'public' | 'private';
 }
 ```
 
-### 🧠 Memory - 记忆管理
+### 🧠 Memory - Memory Management
 ```typescript
 interface Memory {
-  content: string;           // 记忆内容
+  content: string;           // Memory content
   memory_type: 'experience' | 'event' | 'learning' | 'interaction' | 'achievement' | 'mistake';
-  importance: number;        // 1-10重要程度评级
-  related_people?: string;   // 相关人员
-  location?: string;         // 发生地点
-  memory_date?: string;      // 具体日期
-  keywords: string[];        // 关键词标签
-  source_app: string;        // 数据来源应用
-  reference_urls?: string[]; // 相关链接
+  importance: number;        // 1-10 importance rating
+  related_people?: string;   // Related people
+  location?: string;         // Location
+  memory_date?: string;      // Specific date
+  keywords: string[];        // Keyword tags
+  source_app: string;        // Source application
+  reference_urls?: string[]; // Related links
   privacy_level: 'public' | 'private';
 }
 ```
 
-### 💭 Viewpoint - 观点立场
+### 💭 Viewpoint - Opinions and Stances
 ```typescript
 interface Viewpoint {
-  content: string;           // 观点内容
-  source_people?: string;    // 观点来源人员
-  related_event?: string;    // 相关事件
-  keywords: string[];        // 关键词
-  reference_urls?: string[]; // 参考链接
+  content: string;           // Viewpoint content
+  source_people?: string;    // Source person
+  related_event?: string;    // Related event
+  keywords: string[];        // Keywords
+  reference_urls?: string[]; // Reference links
   privacy_level: 'public' | 'private';
 }
 ```
 
-### 🎯 Goal - 目标管理
+### 🎯 Goal - Goal Management
 ```typescript
 interface Goal {
-  content: string;           // 目标内容
+  content: string;           // Goal content
   type: 'long_term' | 'short_term' | 'plan' | 'todo';
-  deadline?: string;         // 截止日期
+  deadline?: string;         // Deadline
   status: 'planning' | 'in_progress' | 'completed' | 'abandoned';
-  keywords: string[];        // 关键词
+  keywords: string[];        // Keywords
   privacy_level: 'public' | 'private';
 }
 ```
 
-## 🛠️ 使用指南
+## 🛠️ Usage Guide
 
-### 基本操作示例
+### Basic Operation Examples
 
-#### 1. 添加记忆
+#### 1. Adding Memory
 ```python
-# 通过MCP工具
+# Through MCP tool
 manage_memories(
     action="save",
-    content="今天学习了Rust的所有权概念，理解了借用检查器的工作原理",
+    content="Today I learned Rust's ownership concept and understood how the borrow checker works",
     memory_type="learning",
     importance=8,
-    keywords=["Rust", "所有权", "借用检查器", "编程语言"],
-    related_people="技术导师张老师"
+    keywords=["Rust", "ownership", "borrow checker", "programming language"],
+    related_people="Technical mentor Teacher Zhang"
 )
 ```
 
-#### 2. 查询记忆
+#### 2. Querying Memory
 ```python
-# 查询学习相关的重要记忆
+# Query important learning-related memories
 manage_memories(
     action="query",
     filter={
@@ -256,33 +258,33 @@ manage_memories(
 )
 ```
 
-#### 3. 设置目标
+#### 3. Setting Goals
 ```python
 manage_goals(
     action="save",
-    content="3个月内完成Rust项目重构",
+    content="Complete Rust project refactoring within 3 months",
     type="short_term",
     deadline="2024-06-01",
     status="planning",
-    keywords=["Rust", "重构", "项目管理"]
+    keywords=["Rust", "refactoring", "project management"]
 )
 ```
 
-#### 4. 记录观点
+#### 4. Recording Viewpoints
 ```python
 manage_viewpoints(
     action="save",
-    content="我认为代码可读性比性能优化更重要，除非性能成为明显瓶颈",
-    keywords=["编程哲学", "代码质量", "性能优化"],
-    related_event="团队代码评审讨论"
+    content="I believe code readability is more important than performance optimization, unless performance becomes an obvious bottleneck",
+    keywords=["programming philosophy", "code quality", "performance optimization"],
+    related_event="Team code review discussion"
 )
 ```
 
-### 高级查询功能
+### Advanced Query Features
 
-#### 复杂条件查询
+#### Complex Conditional Queries
 ```python
-# 查询最近一周的重要学习记忆
+# Query important learning memories from the past week
 manage_memories(
     action="query",
     filter={
@@ -290,7 +292,7 @@ manage_memories(
             {"memory_type": ["learning", "experience"]},
             {"importance": {"gte": 7}},
             {"created_time": {"gte": "2024-03-01"}},
-            {"keywords": {"contains": "编程"}}
+            {"keywords": {"contains": "programming"}}
         ]
     },
     sort_by="importance",
@@ -299,9 +301,9 @@ manage_memories(
 )
 ```
 
-#### 关联数据查询
+#### Related Data Queries
 ```python
-# 查询与特定目标相关的所有数据
+# Query all data related to specific goals
 execute_custom_sql(
     sql="""
     SELECT m.content, m.memory_type, m.importance 
@@ -313,79 +315,79 @@ execute_custom_sql(
 )
 ```
 
-## 🔧 API参考
+## 🔧 API Reference
 
-### MCP工具列表
+### MCP Tool List
 
-| 工具名称 | 功能描述 | 主要参数 |
-|---------|---------|---------|
-| **基础信息** |
-| `get_persona()` | 获取个人档案信息 | - |
-| `save_persona()` | 更新个人档案 | name, gender, personality, bio |
-| **数据管理** |
-| `manage_memories()` | 记忆数据管理 | action, content, memory_type, importance |
-| `manage_viewpoints()` | 观点数据管理 | action, content, keywords |
-| `manage_goals()` | 目标数据管理 | action, content, type, deadline, status |
-| `manage_preferences()` | 偏好数据管理 | action, content, context |
-| `manage_insights()` | 洞察数据管理 | action, content, keywords |
-| `manage_methodologies()` | 方法论管理 | action, content, type, effectiveness |
-| `manage_focuses()` | 关注点管理 | action, content, priority, status |
-| `manage_predictions()` | 预测记录管理 | action, content, timeframe, basis |
-| **数据库操作** |
-| `execute_custom_sql()` | 执行自定义SQL | sql, params, fetch_results |
-| `get_table_schema()` | 获取表结构信息 | table_name |
+| Tool Name | Function Description | Main Parameters |
+|-----------|---------------------|-----------------|
+| **Basic Information** |
+| `get_persona()` | Get personal profile information | - |
+| `save_persona()` | Update personal profile | name, gender, personality, bio |
+| **Data Management** |
+| `manage_memories()` | Memory data management | action, content, memory_type, importance |
+| `manage_viewpoints()` | Viewpoint data management | action, content, keywords |
+| `manage_goals()` | Goal data management | action, content, type, deadline, status |
+| `manage_preferences()` | Preference data management | action, content, context |
+| `manage_insights()` | Insight data management | action, content, keywords |
+| `manage_methodologies()` | Methodology management | action, content, type, effectiveness |
+| `manage_focuses()` | Focus management | action, content, priority, status |
+| `manage_predictions()` | Prediction record management | action, content, timeframe, basis |
+| **Database Operations** |
+| `execute_custom_sql()` | Execute custom SQL | sql, params, fetch_results |
+| `get_table_schema()` | Get table structure information | table_name |
 
-### 查询过滤器语法
+### Query Filter Syntax
 
 ```python
-# 基本过滤器
+# Basic filters
 filter = {
-    "memory_type": ["learning", "experience"],  # 包含匹配
-    "importance": {"gte": 7},                   # 大于等于
-    "created_time": {"gte": "2024-01-01"}      # 日期范围
+    "memory_type": ["learning", "experience"],  # Include matching
+    "importance": {"gte": 7},                   # Greater than or equal
+    "created_time": {"gte": "2024-01-01"}      # Date range
 }
 
-# 复合条件
+# Compound conditions
 filter = {
     "and": [
         {"importance": {"gte": 8}},
-        {"keywords": {"contains": "编程"}},
+        {"keywords": {"contains": "programming"}},
         {"privacy_level": {"ne": "private"}}
     ]
 }
 
-# 支持的操作符
-# eq: 等于, ne: 不等于, gt: 大于, gte: 大于等于
-# lt: 小于, lte: 小于等于, contains: 包含, in: 在列表中
+# Supported operators
+# eq: equals, ne: not equals, gt: greater than, gte: greater than or equal
+# lt: less than, lte: less than or equal, contains: contains, in: in list
 ```
 
-## 🎭 使用场景
+## 🎭 Use Cases
 
-### 场景1：跨平台对话延续
+### Scenario 1: Cross-Platform Conversation Continuation
 
-**问题**: 昨天在ChatGPT讨论项目架构，今天想在Claude继续
+**Problem**: Discussed project architecture in ChatGPT yesterday, want to continue in Claude today
 
-**解决方案**:
+**Solution**:
 ```python
-# Claude通过MCP自动检索相关上下文
+# Claude automatically retrieves relevant context through MCP
 memories = manage_memories(
     action="query",
     filter={
-        "keywords": {"contains": "架构"},
+        "keywords": {"contains": "architecture"},
         "memory_date": {"gte": "yesterday"},
         "memory_type": ["interaction", "learning"]
     }
 )
-# Claude现在可以无缝继续昨天的讨论
+# Claude can now seamlessly continue yesterday's discussion
 ```
 
-### 场景2：个性化学习辅导
+### Scenario 2: Personalized Learning Assistance
 
-**问题**: 希望AI了解我的学习进度和偏好
+**Problem**: Want AI to understand my learning progress and preferences
 
-**解决方案**:
+**Solution**:
 ```python
-# AI获取学习背景
+# AI gets learning background
 persona = get_persona()
 learning_history = manage_memories(
     action="query",
@@ -394,118 +396,117 @@ learning_history = manage_memories(
         "keywords": {"contains": "Rust"}
     }
 )
-# AI基于你的背景定制教学内容
+# AI customizes teaching content based on your background
 ```
 
-### 场景3：目标追踪和复盘
+### Scenario 3: Goal Tracking and Review
 
-**问题**: 想要系统地管理和追踪个人目标
+**Problem**: Want to systematically manage and track personal goals
 
-**解决方案**:
+**Solution**:
 ```python
-# 设置目标
+# Set goals
 manage_goals(
     action="save",
-    content="掌握Rust异步编程",
+    content="Master Rust async programming",
     type="short_term",
     deadline="2024-05-01"
 )
 
-# 记录学习进展
+# Record learning progress
 manage_memories(
     action="save",
-    content="完成了tokio基础教程，理解了async/await概念",
+    content="Completed tokio basics tutorial, understood async/await concepts",
     memory_type="learning",
     importance=7,
-    keywords=["Rust", "异步编程", "tokio"]
+    keywords=["Rust", "async programming", "tokio"]
 )
 
-# 定期复盘
+# Regular review
 goals = manage_goals(
     action="query",
     filter={"status": ["in_progress"]}
 )
 ```
 
-## 🔒 隐私和安全
+## 🔒 Privacy and Security
 
-### 数据控制
-- **本地存储**: 所有数据存储在你控制的SQLite数据库中
-- **完全导出**: 支持完整的数据导出和备份
-- **选择性访问**: 可以精确控制哪些数据对AI应用可见
+### Data Control
+- **Local Storage**: All data stored in SQLite database under your control
+- **Complete Export**: Support for complete data export and backup
+- **Selective Access**: Precise control over which data is visible to AI applications
 
+## 🏗️ Development Guide
 
-## 🏗️ 开发指南
-
-### 项目结构
+### Project Structure
 ```
 userbank-core/
-├── main.py              # MCP服务器主入口
-├── main_sse.py          # SSE模式服务器
-├── config.json          # 配置文件
-├── config_manager.py    # 配置管理器
-├── requirements.txt     # 依赖列表
+├── main.py              # MCP server main entry
+├── main_sse.py          # SSE mode server
+├── config.json          # Configuration file
+├── config_manager.py    # Configuration manager
+├── requirements.txt     # Dependencies list
 ├── Database/
-│   ├── database.py      # 数据库操作类
+│   ├── database.py      # Database operation class
 │   └── __init__.py
-├── tools/               # MCP工具模块
-│   ├── base.py          # 基础工具类
-│   ├── persona_tools.py # 个人档案工具
-│   ├── memory_tools.py  # 记忆管理工具
-│   ├── viewpoint_tools.py # 观点管理工具
-│   ├── goal_tools.py    # 目标管理工具
-│   └── ...              # 其他工具模块
+├── tools/               # MCP tool modules
+│   ├── base.py          # Base tool class
+│   ├── persona_tools.py # Personal profile tools
+│   ├── memory_tools.py  # Memory management tools
+│   ├── viewpoint_tools.py # Viewpoint management tools
+│   ├── goal_tools.py    # Goal management tools
+│   └── ...              # Other tool modules
 └── README.md
 ```
 
-## 🤝 贡献指南
+## 🤝 Contributing Guide
 
-作为UserBank生态系统的核心组件，我们欢迎各种形式的贡献：
+As a core component of the UserBank ecosystem, we welcome all forms of contributions:
 
-1. **核心功能改进**: 提交新功能或改进现有核心功能
-2. **Bug修复**: 报告和修复发现的问题
-3. **文档完善**: 改进文档和使用指南
-4. **测试用例**: 添加测试用例提高代码质量（见roadmap v0.2.0）
-5. **性能优化**: 优化数据库查询和系统性能
-6. **生态集成**: 帮助构建UserBank生态系统的其他组件
+1. **Core Feature Improvements**: Submit new features or improve existing core functionality
+2. **Bug Fixes**: Report and fix discovered issues
+3. **Documentation Enhancement**: Improve documentation and usage guides
+4. **Test Cases**: Add test cases to improve code quality (see roadmap v0.2.0)
+5. **Performance Optimization**: Optimize database queries and system performance
+6. **Ecosystem Integration**: Help build other components of the UserBank ecosystem
 
-### 开发环境设置
+### Development Environment Setup
 
 ```bash
-# 克隆项目
+# Clone project
 git clone https://github.com/MixLabPro/userbank-core.git
 cd userbank-core
 
-# 创建虚拟环境
+# Create virtual environment
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 
-# 安装开发依赖
+# Install development dependencies
 pip install -r requirements.txt
 pip install -e .
 
-# 启动开发服务器
+# Start development server
 python main.py
 ```
 
-## 📚 相关资源
+## 📚 Related Resources
 
-- **MCP协议文档**: [https://modelcontextprotocol.io](https://modelcontextprotocol.io)
-- **Claude Desktop MCP配置**: [Claude MCP Guide](https://docs.anthropic.com/claude/docs/mcp)
-- **SQLite文档**: [https://sqlite.org/docs.html](https://sqlite.org/docs.html)
-- **FastMCP框架**: [https://github.com/jlowin/fastmcp](https://github.com/jlowin/fastmcp)
+- **MCP Protocol Documentation**: [https://modelcontextprotocol.io](https://modelcontextprotocol.io)
+- **Claude Desktop MCP Configuration**: [Claude MCP Guide](https://docs.anthropic.com/claude/docs/mcp)
+- **SQLite Documentation**: [https://sqlite.org/docs.html](https://sqlite.org/docs.html)
+- **FastMCP Framework**: [https://github.com/jlowin/fastmcp](https://github.com/jlowin/fastmcp)
 
-## 📜 许可证
+## 📜 License
 
-MIT License - 详见 [LICENSE](LICENSE) 文件
+MIT License - See [LICENSE](LICENSE) file for details
 
 ---
 
 <div align="center">
   
-**让AI真正了解你，从拥有自己的数据开始**
+**Let AI truly understand you, starting with owning your own data**
 
-*UserBank Core - 存储一次，AI处处可用*
+*UserBank Core - Store once, use everywhere with AI*
 
 [GitHub](https://github.com/your-username/userbank-core) • [Issues](https://github.com/your-username/userbank-core/issues) • [Discussions](https://github.com/your-username/userbank-core/discussions)
 
