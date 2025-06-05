@@ -40,7 +40,7 @@ class ConfigManager:
                 "filename": "profile_data.db"
             },
             "server": {
-                "port": 2333,
+                "port": 8088,
                 "host": "0.0.0.0"
             },
             "system": {
