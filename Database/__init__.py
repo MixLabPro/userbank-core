@@ -1,6 +1,5 @@
 """
-个人画像数据结构分类系统包
-Personal Profile Data Structure Classification System Package
+Personal Profile Database Management Package
 """
 
 __version__ = "1.0.0"
