@@ -33,7 +33,7 @@ if (Test-Path "build") { Remove-Item -Recurse -Force "build" }
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Green
-Write-Host "开始打包 main.py (UserBank_Stdio.exe)" -ForegroundColor Green
+Write-Host "开始打包 main.py (UserBank_Stdio_Core.exe)" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Green
 
 pyinstaller build_main.spec --clean --noconfirm
@@ -45,7 +45,7 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Green
-Write-Host "开始打包 main_sse.py (UserBank_SSE.exe)" -ForegroundColor Green
+Write-Host "开始打包 main_sse.py (UserBank_SSE_Core.exe)" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Green
 
 pyinstaller build_main_sse.spec --clean --noconfirm
@@ -61,8 +61,8 @@ Write-Host "打包完成！" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "生成的文件位置：" -ForegroundColor Cyan
-Write-Host "- UserBank_Stdio.exe: dist\UserBank_Stdio.exe" -ForegroundColor White
-Write-Host "- UserBank_SSE.exe: dist\UserBank_SSE.exe" -ForegroundColor White
+Write-Host "- UserBank_Stdio_Core.exe: dist\UserBank_Stdio_Core.exe" -ForegroundColor White
+Write-Host "- UserBank_SSE_Core.exe: dist\UserBank_SSE_Core.exe" -ForegroundColor White
 Write-Host ""
 Write-Host "您可以将这些 exe 文件复制到任何 Windows 机器上运行。" -ForegroundColor Green
 Write-Host ""

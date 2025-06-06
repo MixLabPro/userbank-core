@@ -25,7 +25,7 @@ if exist "build" rmdir /s /q "build"
 
 echo.
 echo ========================================
-echo 开始打包 main.py (UserBank_Stdio.exe)
+echo 开始打包 main.py (UserBank_Stdio_Core.exe)
 echo ========================================
 pyinstaller build_main.spec --clean --noconfirm
 if %errorlevel% neq 0 (
@@ -36,7 +36,7 @@ if %errorlevel% neq 0 (
 
 echo.
 echo ========================================
-echo 开始打包 main_sse.py (UserBank_SSE.exe)
+echo 开始打包 main_sse.py (UserBank_SSE_Core.exe)
 echo ========================================
 pyinstaller build_main_sse.spec --clean --noconfirm
 if %errorlevel% neq 0 (
@@ -51,8 +51,8 @@ echo 打包完成！
 echo ========================================
 echo.
 echo 生成的文件位置：
-echo - UserBank_Stdio.exe: dist\UserBank_Stdio.exe
-echo - UserBank_SSE.exe: dist\UserBank_SSE.exe
+echo - UserBank_Stdio_Core.exe: dist\UserBank_Stdio_Core.exe
+echo - UserBank_SSE_Core.exe: dist\UserBank_SSE_Core.exe
 echo.
 echo 您可以将这些 exe 文件复制到任何 Windows 机器上运行。
 echo.

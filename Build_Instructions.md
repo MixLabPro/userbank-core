@@ -48,17 +48,17 @@ pyinstaller build_main_sse.spec --clean --noconfirm
 
 After successful packaging, two executable files will be generated in the `dist` directory:
 
-- `UserBank_Stdio.exe` - Standard MCP server based on `main.py`
-- `UserBank_SSE.exe` - SSE mode server based on `main_sse.py`
+- `UserBank_Stdio_Core.exe` - Standard MCP server based on `main.py`
+- `UserBank_SSE_Core.exe` - SSE mode server based on `main_sse.py`
 
 ## Running Instructions
 
-### UserBank_Stdio.exe
+### UserBank_Stdio_Core.exe
 - This is the standard MCP server
 - Double-click to run and start the server
 - Suitable for MCP client connections
 
-### UserBank_SSE.exe
+### UserBank_SSE_Core.exe
 - This is the SSE mode HTTP server
 - Double-click to start the web server
 - Default listening port is determined by configuration file

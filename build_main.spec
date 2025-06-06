@@ -61,7 +61,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='UserBank_Stdio',
+    name='UserBank_Stdio_Core',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

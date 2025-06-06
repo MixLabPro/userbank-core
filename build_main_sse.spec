@@ -67,7 +67,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='UserBank_SSE',
+    name='UserBank_SSE_Core',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
