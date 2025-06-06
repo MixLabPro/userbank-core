@@ -42,10 +42,6 @@ class ConfigManager:
             "server": {
                 "port": 8088,
                 "host": "0.0.0.0"
-            },
-            "system": {
-                "timezone_offset": 8,
-                "privacy_level": "private"
             }
         }
     
