@@ -7,3 +7,4 @@ profile_data.db
 /tools/__pycache__
 *.db
 config.json
+/build
