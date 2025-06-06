@@ -9,3 +9,4 @@ profile_data.db
 config.json
 /build
 .DS_Store
+/venv
