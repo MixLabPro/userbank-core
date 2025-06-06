@@ -7,8 +7,32 @@ Responsible for reading and creating system configuration file config.json
 
 import json
 import os
+import sys
 from pathlib import Path
 from typing import Dict, Any
+
+def get_executable_dir() -> Path:
+    """
+    Get the directory where the executable file is located
+    
+    This function handles both development environment and packaged executable scenarios:
+    - In development: returns the directory containing the script file
+    - In packaged executable: returns the directory containing the executable file
+    
+    Returns:
+        Path: Directory path where the executable/script is located
+    """
+    if getattr(sys, 'frozen', False):
+        # Running as packaged executable (PyInstaller, py2exe, etc.)
+        if hasattr(sys, '_MEIPASS'):
+            # PyInstaller case: sys.executable points to the executable file
+            return Path(sys.executable).parent
+        else:
+            # Other packaging tools
+            return Path(sys.executable).parent
+    else:
+        # Running as Python script in development environment
+        return Path(__file__).parent
 
 class ConfigManager:
     """Configuration management class"""
@@ -18,12 +42,12 @@ class ConfigManager:
         Initialize configuration manager
         
         Args:
-            config_path: Configuration file path, if None, use config.json in the same directory as main.py
+            config_path: Configuration file path, if None, use config.json in the executable directory
         """
         if config_path is None:
-            # Get current file directory (i.e., main.py directory)
-            current_dir = Path(__file__).parent
-            self.config_path = current_dir / "config.json"
+            # Get executable directory
+            executable_dir = get_executable_dir()
+            self.config_path = executable_dir / "config.json"
         else:
             self.config_path = Path(config_path)
         
@@ -31,17 +55,21 @@ class ConfigManager:
     
     def _get_default_config(self) -> Dict[str, Any]:
         """Get default configuration"""
-        # Get main.py directory as default database path
-        main_dir = Path(__file__).parent
+        # Get executable directory as default database path
+        executable_dir = get_executable_dir()
         
         return {
             "database": {
-                "path": str(main_dir),
+                "path": str(executable_dir),
                 "filename": "profile_data.db"
             },
             "server": {
                 "port": 8088,
                 "host": "0.0.0.0"
+            },
+            "system": {
+                "timezone_offset": 8,
+                "privacy_level": "private"
             }
         }
     
@@ -113,6 +141,9 @@ class ConfigManager:
     def _save_config(self, config: Dict[str, Any]):
         """Save configuration file"""
         try:
+            # Ensure the directory exists
+            self.config_path.parent.mkdir(parents=True, exist_ok=True)
+            
             with open(self.config_path, 'w', encoding='utf-8') as f:
                 json.dump(config, f, ensure_ascii=False, indent=2)
         except Exception as e:

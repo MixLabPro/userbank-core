@@ -8,8 +8,12 @@ fastmcp>=2.0.0
 uvicorn>=0.24.0
 starlette>=0.27.0
 
+
 # Async support
 asyncio-mqtt>=0.13.0
 
 # Other dependencies
 python-dateutil>=2.8.0
+
+# build
+pyinstaller>=6.14.0
