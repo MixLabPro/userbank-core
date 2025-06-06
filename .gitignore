@@ -8,3 +8,4 @@ profile_data.db
 *.db
 config.json
 /build
+.DS_Store
