@@ -10,7 +10,7 @@
 
 *From "Data Hosted on Various Platforms" to "Owning Your Own Data Bank"*
 
-[Quick Start](#-quick-start) • [Core Features](#-core-features) • [Usage Guide](#-usage-guide) • [API Reference](#-api-reference) • [Development Guide](#-development-guide)
+[Quick Start](#-quick-start) • [Core Features](#-core-features) • [Usage Guide](#-usage-guide) • [API Reference](#-api-reference) • [Development Guide](#-development-guide)• [中文版](./README-zh.md)
 
 </div>
 
