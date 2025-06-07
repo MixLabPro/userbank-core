@@ -10,3 +10,4 @@ config.json
 /build
 .DS_Store
 /venv
+.DS_Store

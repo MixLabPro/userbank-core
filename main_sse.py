@@ -276,8 +276,8 @@ if __name__ == "__main__":
     # Get server configuration from config file
     host = config_manager.get_server_host()
     port = config_manager.get_server_port()
-    
-    print(f"Server will start at {host}:{port}")
-    
+    print("\n\n")
+    print(f"Server will start at {host}:{port}/sse")
+    print("\n\n")
     # Start server using uvicorn
     uvicorn.run(http_app, host=host, port=port) 
